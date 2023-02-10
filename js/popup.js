@@ -8,7 +8,7 @@ chrome.tabs.query({currentWindow: true, active: true}, function(tabs){
     getLinks();
 });
 
-//Given a limit, displays a warning if it is availible
+//Given a limit, displays a warning if it is available
 var overLimit = false;
 async function getLinks(){
     var html = await getData(document.getElementById('urlFormInput').value);
@@ -20,11 +20,11 @@ async function getLinks(){
     if(overLimit)
     {
       document.getElementById("link_alert").hidden = false;
-      document.getElementById('link_alert').innerText="This page has over "+link_limit+" connected pages, we reccomend setting a max depth or limiting links via max links";
+      document.getElementById('link_alert').innerText="This page has over "+link_limit+" connected pages, we recommend setting a max depth or limiting links via max links.";
     }
 }
 
-
+var extId = chrome.runtime.id;
 document.addEventListener('DOMContentLoaded', popupFunction);//When extension is opened, popupFunction is ran
 
 var urlList = [];//initializes empty urls
@@ -41,7 +41,7 @@ async function popupFunction() {
     );
   
 }
-var depth = 0; //sets the default depth of the 
+var depth = 0; //sets the default depth of the crawl
 var zip = new JSZip(); //creates a new file to hold the zipped contents
 
 async function saveAs(){
@@ -64,8 +64,8 @@ async function saveAs(){
         }
         var html_response ="<p>Error has occured</p>";//Default html if something goes wrong with the 
         html_response = await scrape_html(urlList[i].url,urlList[i].depth); //scrapes the pages and returns html
-        if(i==0)
-          zip.file("A_"+getTitle(urlList[i].url)+".html", html_response); //Sets the first url to the depth of 0 with A_ so it appears at the top of the 
+        if(i===0)
+          zip.file("A_"+getTitle(urlList[i].url)+".html", html_response); //Sets the first url to the depth of 0 with A_ so it appears at the top of the folder
         else
           zip.file(getTitle(urlList[i].url)+".html", html_response);//The rest of the links are essentially the url of the page
     }
@@ -79,7 +79,7 @@ async function saveAs(){
             url: urlBlob,
             filename: "scrapedWebsites.zip",
             saveAs:true
-        }).catch(err => document.getElementById("currentProgress").innerText= "error")
+        }).catch(err => document.getElementById("currentProgress").innerText= "error");
 
 
         document.getElementById("currentProgress").innerText= "Successfully Download";//Informs user of successful download
@@ -139,12 +139,13 @@ async function scrape_html(url,urlDepth){
     async function getCSS(html){
       var dp = new DOMParser();
       var PARSEDHTML = dp.parseFromString(html, 'text/html');
+      console.log(PARSEDHTML);
       var linkElements = PARSEDHTML.getElementsByTagName("link");
       console.log(linkElements.length);
       for(const elementRef of linkElements){
         // Create a dummy element to transfer <link> tag href to an <a> tag
         // so that JQuery can identify its protocol, hostname, and pathname etc.
-        if(elementRef.getAttribute('rel')=='stylesheet')
+        if(elementRef.getAttribute('rel')==='stylesheet')
         {
         let element = document.createElement("a");
         $(element).attr("href", elementRef.getAttribute('href'));
@@ -152,14 +153,14 @@ async function scrape_html(url,urlDepth){
         if (element.protocol === "chrome-extension:") {
           element = element.toString().replace("chrome-extension:", "https:");
         }
-        if (element.toString().search(chrome.runtime.id) >= 1) {
-          element = element.toString().replace(chrome.runtime.id, hostname);
+        if (element.toString().search(extId) >= 1) {
+          element = element.toString().replace(extId, hostname);
         }
         console.log(element);
         let cssText = await getData(element);
-        if(cssText != "Failed"){
+        if(cssText !== "Failed"){
         try {
-          // Waits for the function to fulfil promise then set data to cssText
+          // Waits for the function to fulfill promise then set data to cssText
           //console.log(cssText)
 
           // Wrap data into <sytle> tags to append to html
@@ -167,25 +168,25 @@ async function scrape_html(url,urlDepth){
           //THIs block of code essentially takes background images and downloads them
           //Note, svgs are not a part of this
           var i = 0;
-          while(cssText.indexOf("background-image:url(",i)!=-1)//Replaces Bg Images and Downloads them
+          while(cssText.indexOf("background-image:url(",i)!==-1)//Replaces Bg Images and Downloads them
           {
             var bg = cssText.substring(cssText.indexOf("background-image:url(",i));
             var bgIni = bg.substring(bg.indexOf("url")+4,bg.indexOf(")"));
             var imageName = "";
-            if(bgIni.lastIndexOf('?')!=-1){
+            if(bgIni.lastIndexOf('?')!==-1){
               imageName = bgIni.substring(bgIni.lastIndexOf('/')+1,bgIni.lastIndexOf('?'));
             }
             else{
               imageName = bgIni.substring(bgIni.lastIndexOf('/')+1);
             }
             console.log(bgIni);
-            if(bgIni.indexOf("https")==-1)
+            if(bgIni.indexOf("https")===-1)
             {
               var data = await urlToPromise("https://"+(new URL(url)).hostname+bgIni);
-              zip.file("img/"+imageName, data, {binary: true})
+              zip.file("img/"+imageName, data, {binary: true});
             }
             else{
-              zip.file("img/"+imageName, urlToPromise(bgIni), {binary: true})
+              zip.file("img/"+imageName, urlToPromise(bgIni), {binary: true});
             }
             cssText = cssText.replace(bgIni,"../img/"+imageName);
             //console.log(bgIni + " => "+"https://"+(new URL(url)).hostname+bgIni + " => img/" + imageName );
@@ -215,11 +216,11 @@ async function scrape_html(url,urlDepth){
           var parsed = dp.parseFromString(html, 'text/html');
           var testImageElements = parsed.getElementsByTagName("img");
           Array.from(testImageElements).forEach((img) => {
-              let src = img.getAttribute('src')
+              let src = img.getAttribute('src');
               let srcset = img.getAttribute('srcset');
               //console.log(src)
-              if(src.toString().search("//") != -1) {
-                  if(src.toString().search("https:")==-1)
+              if(src.toString().search("//") !== -1) {
+                  if(src.toString().search("https:")===-1)
                   {
                     src = "https:"+src;
                   }
@@ -242,7 +243,7 @@ async function scrape_html(url,urlDepth){
           console.log(url);
       }
       return html;
-  }
+  };
 
   //Used for gettning image data, used in getCSS and get_IMGS
   function urlToPromise(url) {
@@ -274,12 +275,11 @@ async function scrape_html(url,urlDepth){
               {
 
                 var link =links[j].href.toString(); //Given a link
-                console.log("Link: "+link);
-                if((link.search('chrome-extension://infnpgocoifepkambhnecmfnpcogajba')!=-1&&link.indexOf('#')==-1))//checks if the link is in the correct format
+                if((link.search('chrome-extension://' + extId)!==-1&&link.indexOf('#')===-1))//checks if the link is in the correct format
                 {
                   link = "https://"+(new URL(url)).hostname+link;
-                  link = link.replace('chrome-extension://infnpgocoifepkambhnecmfnpcogajba',''); //also for the links structure
-                  if(!checkDuplicate(link)&&link.length!=0){ //if the resulting link is not one that is currently in the list
+                  link = link.replace('chrome-extension://' + extId,''); //also for the links structure
+                  if(!checkDuplicate(link)&&link.length!==0){ //if the resulting link is not one that is currently in the list
                     console.log("adding to list:" + link);
                     urlList.push({url:link,depth:urlDepth+1});//push it to the list. thus setting it up for more scraping
                   }
