@@ -1,0 +1,31 @@
+{
+  "name": "Grey-box Web Scraper",
+  "description": "Download websites",
+  "version": "1.0",
+  "manifest_version": 3,
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/script2.js"]
+    }
+  ],
+
+  "permissions": [
+    "webRequest", "webRequestBlocking",
+    "storage",
+    "tabs",
+    "downloads"
+  ],
+
+
+  "action": {
+    "default_popup": "popup.html"
+  }
+
+
+}
