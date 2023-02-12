@@ -1,5 +1,5 @@
 body {
-  width : 200px;
+  width : 350px;
 }
 
 #depthLabel {
@@ -13,7 +13,6 @@ body {
 .tooltip2 {
   position: relative;
   display: inline-block;
-  border-bottom: 3px dotted black;
 }
 
 .tooltip2 .tooltiptext2 {
