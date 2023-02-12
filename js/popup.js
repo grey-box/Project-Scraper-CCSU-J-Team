@@ -45,6 +45,7 @@ var depth = 0; //sets the default depth of the crawl
 var zip = new JSZip(); //creates a new file to hold the zipped contents
 
 async function saveAs(){
+  console.log(urlList);
   urlList[0]= {url:document.getElementById('urlFormInput').value,depth:0}; //sets the first url to the depth of 0
   var max_links = document.getElementById('max-links').value; //gets the value of the max links (if it exists)
   depth = document.getElementById('depthFormInput').value;//gets the max depth input by the user
@@ -264,7 +265,9 @@ async function scrape_html(url,urlDepth){
         html = await getData(url); //gets html of the url
           try {
             html = await getCSS(html); //downloads css
-            html = await get_imgs(html); //downloads images
+            if (!document.getElementById('omit_imgs').checked) { // checks if the user wants to omit images or not
+              html = await get_imgs(html); //downloads images
+            }
             if(urlDepth < depth){ //if the max depth is higher than our current depth
 
               //Crawls html for all links
