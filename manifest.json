@@ -3,7 +3,11 @@
   "description": "Download websites",
   "version": "1.0",
   "manifest_version": 3,
-
+	"icons": {
+		"128": "images/Picture4_128.png",
+		"48": "images/Picture4_48.png",
+		"16": "images/Picture4_16.png"
+	  },
   "background": {
     "service_worker": "background.js"
   },
