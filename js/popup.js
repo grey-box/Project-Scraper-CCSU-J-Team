@@ -51,7 +51,7 @@ async function saveAs(){
   depth = document.getElementById('depthFormInput').value;//gets the max depth input by the user
   document.getElementById('max_links_op').disabled=true;//checkbox disabled during crawling
   document.getElementById('max-links').disabled=true;//max links textbox also disabeled during crawling
-    for(var i = 0; (i < urlList.length&&!document.getElementById('max_links_op').checked)||(i<urlList.length&&i<=max_links&&document.getElementById('max_links_op').checked);i++)
+    for(var i = 0; (i < urlList.length && !document.getElementById('max_links_op').checked)||(i<urlList.length&&i<=max_links&&document.getElementById('max_links_op').checked);i++)
     {
       //If the crawler was given max links, update the progress bar based on max_links
         if(document.getElementById('max_links_op').checked)
@@ -82,13 +82,10 @@ async function saveAs(){
             saveAs:true
         }).catch(err => document.getElementById("currentProgress").innerText= "error");
 
-
         document.getElementById("currentProgress").innerText= "Successfully Download";//Informs user of successful download
-
         //Undisables max link options
         document.getElementById('max_links_op').disabled=false;
         document.getElementById('max-links').disabled=false;
-
     });
     zip = new JSZip();//Clears the zip for future use
 }
@@ -114,7 +111,31 @@ let getData = async (url) => {
   }
   return result;
 };
+// Check a url for working
+let checkUrl = async(url) => {
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    if (response.ok) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.log("Error:", error);
+  }
+}
+function getRelativePath(relPath, baseUrl){
+  // To get absolute path, we need use URL class to concat a relative path and an absolute path
+  /** 
+  // Example
+  // new URL("../mypath","http://www.stackoverflow.com/search").href
+  //=> "http://www.stackoverflow.com/mypath"  
+  */
 
+  let URLconcat = new URL(relPath, baseUrl);
+  console.log("URL concat : " + URLconcat);
+  return URLconcat;
+}
 //checks a url for a duplicate url
 function checkDuplicate(url){
   for(var i =0;i<urlList.length;i++)
@@ -134,20 +155,22 @@ async function scrape_html(url,urlDepth){
     // Store url recieved from the form
     // let url = urlform.url.value;
     var html = "";//starts the 
-    let hostname = url.match(/(?<=(http|https):\/\/)(\S+?)(?=\/)/)[0];
-
+    //let hostname = url.match(/(?<=(http|https):\/\/)(\S+?)(?=\/)/)[0];
+    let hostname = new URL(url).hostname;
     // Asynchronous function to retrieve CSS from links
     async function getCSS(html){
       var dp = new DOMParser();
       var PARSEDHTML = dp.parseFromString(html, 'text/html');
       console.log(PARSEDHTML);
       var linkElements = PARSEDHTML.getElementsByTagName("link");
-      console.log(linkElements.length);
+      console.log(linkElements);
       for(const elementRef of linkElements){
         // Create a dummy element to transfer <link> tag href to an <a> tag
         // so that JQuery can identify its protocol, hostname, and pathname etc.
         if(elementRef.getAttribute('rel')==='stylesheet')
         {
+        // The important of getAttribute is that the return is relative path.   
+        let relativePath = elementRef.getAttribute('href');
         let element = document.createElement("a");
         $(element).attr("href", elementRef.getAttribute('href'));
 
@@ -157,8 +180,16 @@ async function scrape_html(url,urlDepth){
         if (element.toString().search(extId) >= 1) {
           element = element.toString().replace(extId, hostname);
         }
+        // Check URL work 
+        let flagURL = await checkUrl(element); 
+        console.log("The result after checkURL" + flagURL);
+        // If URL does not work, replace in relative path.
+        if(!flagURL) {
+          element = getRelativePath(relativePath,url);
+        }
         console.log(element);
         let cssText = await getData(element);
+        
         if(cssText !== "Failed"){
         try {
           // Waits for the function to fulfill promise then set data to cssText
@@ -282,6 +313,13 @@ async function scrape_html(url,urlDepth){
                 {
                   link = "https://"+(new URL(url)).hostname+link;
                   link = link.replace('chrome-extension://' + extId,''); //also for the links structure
+                  // Check Link work 
+                   let flagURL = await checkUrl(link); 
+                  console.log("The result after checkURL : " + flagURL);
+                  // If URL does not work, replace in relative path.
+                  if(!flagURL) {
+                    link = getRelativePath(links[j].getAttribute('href'),url);
+                  }
                   if(!checkDuplicate(link)&&link.length!==0){ //if the resulting link is not one that is currently in the list
                     console.log("adding to list:" + link);
                     urlList.push({url:link,depth:urlDepth+1});//push it to the list. thus setting it up for more scraping

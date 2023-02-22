@@ -16,7 +16,7 @@
   ],
 
   "permissions": [
-    "webRequest", "webRequestBlocking",
+    "webRequest", 
     "storage",
     "tabs",
     "downloads"
