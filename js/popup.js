@@ -67,10 +67,11 @@ async function saveAs(){
         var html_response ="<p>Error has occured</p>";//Default html if something goes wrong with the 
         html_response = await scrape_html(urlList[i].url,urlList[i].depth); //scrapes the pages and returns html
         if(i==0)
-          zip.file("A_"+getTitle(urlList[i].url)+".html", html_response); //Sets the first url to the depth of 0 with A_ so it appears at the top of the 
+          zip.file(getTitle(urlList[i].url)+".html", html_response); // Puts the starting webpage in the main directory
         else
-          zip.file(getTitle(urlList[i].url)+".html", html_response);//The rest of the links are essentially the url of the page
+          zip.file("html/" + getTitle(urlList[i].url)+".html", html_response);//The rest of the links are placed in the html folder
     }
+
     console.log('loop is finished'); //scraping of all pages is done
     zip.generateAsync({type:"blob"})
     .then(function(content) {
@@ -220,7 +221,14 @@ async function scrape_html(url, urlDepth) {
             }
             var cssFile = getTitle(element);
             zip.file('css/' + cssFile + '.css', cssText);
-            elementRef.setAttribute('href', 'css/' + cssFile + '.css');
+            // Set the href for our stylesheet. If the depth is greater than 1, we need ../css/ 
+            if (urlDepth >= 1) {
+              elementRef.setAttribute('href', '../css/' + cssFile + '.css');
+            }
+            else {
+              elementRef.setAttribute('href', 'css/' + cssFile + '.css');
+            }
+            
             html = PARSEDHTML.documentElement.innerHTML; //updates the current html
           } catch (err) {
             console.log(err);
@@ -314,7 +322,15 @@ async function scrape_html(url, urlDepth) {
               console.log('adding to list:' + link);
               urlList.push({ url: link, depth: urlDepth + 1 }); //push it to the list. thus setting it up for more scraping
             }
-            links[j].setAttribute('href', getTitle(link) + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
+            // Set the proper href values for our page
+            let linkTitle = getTitle(link);
+            if (urlDepth >= 1) {
+              links[j].setAttribute('href', getTitle(link) + '.html'); // when the depth >=1, we have already set the html/ part, so this avoids linking to /html/html...
+            }
+            else {
+              links[j].setAttribute('href', "html/" + getTitle(link) + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
+            }
+
           }
           html = parsed.documentElement.innerHTML; //gets the resulting html
         }
