@@ -136,7 +136,6 @@ function getAbsolutePath(relPath, baseUrl) {
   */
 
   let URLconcat = new URL(relPath, baseUrl);
-  console.log('URL concat : ' + URLconcat);
   return URLconcat;
 }
 //checks a url for a duplicate url
@@ -168,15 +167,10 @@ async function scrape_html(url, urlDepth) {
       if (elementRef.getAttribute('rel') === 'stylesheet') {
         // The important of getAttribute is that the return is relative path.
         let relativePath = elementRef.getAttribute('href');
-        console.log('attribute (href) : ' + elementRef.getAttribute('href'));
-        console.log('href : ' + elementRef.href);
         let element = elementRef.href;
         if (relativePath.search('https://') == -1) {
           element = getAbsolutePath(relativePath, url);
         }
-        console.log('element : ' + element);
-
-
         let cssText = await getData(element);
         if (cssText !== 'Failed') {
           try {
@@ -195,6 +189,7 @@ async function scrape_html(url, urlDepth) {
                 cssText.indexOf('background-image:url(', i)
               );
               var bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')'));
+              console.log("bg Ini : "+bgIni);
               var imageName = '';
               if (bgIni.lastIndexOf('?') !== -1) {
                 imageName = bgIni.substring(
@@ -204,11 +199,8 @@ async function scrape_html(url, urlDepth) {
               } else {
                 imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
               }
-              console.log(bgIni);
               if (bgIni.indexOf('https') === -1) {
-                var data = await urlToPromise(
-                  'https://' + new URL(url).hostname + bgIni
-                );
+                var data = await urlToPromise(getAbsolutePath(bgIni,url));
                 zip.file('img/' + imageName, data, { binary: true });
               } else {
                 zip.file('img/' + imageName, urlToPromise(bgIni), {
@@ -216,7 +208,6 @@ async function scrape_html(url, urlDepth) {
                 });
               }
               cssText = cssText.replace(bgIni, '../img/' + imageName);
-              //console.log(bgIni + " => "+"https://"+(new URL(url)).hostname+bgIni + " => img/" + imageName );
               i = cssText.indexOf('background-image:url(', i) + 1;
             }
             var cssFile = getTitle(element);
@@ -248,11 +239,9 @@ async function scrape_html(url, urlDepth) {
         var dp = new DOMParser();
         var parsed = dp.parseFromString(html, 'text/html');
         var testImageElements = parsed.getElementsByTagName("img");
-        Array.from(testImageElements).forEach((img) => {
+        Array.from(testImageElements).forEach(async (img) => {
             let src = img.getAttribute('src')
-            console.log(src);
             let srcset = img.getAttribute('srcset');
-            //console.log(src)
             if(src.toString().search("//") != -1) {
                 if(src.toString().search("https:")==-1)// Convert to https:
                 {
@@ -263,13 +252,17 @@ async function scrape_html(url, urlDepth) {
                 zip.file("img/"+imageName, urlToPromise(src), {binary: true});
             }
             else{
-              src = "https:"+(new URL(url)).hostname+src;
+              abPath = getAbsolutePath(src,url)
+              // src = "https:"+(new URL(url)).hostname+src;
               var imageName = src.substring(src.lastIndexOf('/') + 1);
               imageName = imageName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
-              zip.file("img/"+imageName, urlToPromise(src), {binary: true});
+              zip.file("img/"+imageName, urlToPromise(abPath), {binary: true});
             }
             img.setAttribute('srcset','');
-            img.setAttribute("src","img/"+imageName);
+            if (urlDepth>=1)
+              img.setAttribute("src","../img/"+imageName);
+            else 
+              img.setAttribute("src","img/"+imageName);
         });
         html=parsed.documentElement.innerHTML;
         return html;
