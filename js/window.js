@@ -14,6 +14,8 @@ bc.addEventListener("message", (event) => {
 });
 
 var urlList = []; //initializes empty urls
+var urlCSS = [];
+var urlImage = [];
 
 var extId = chrome.runtime.id; // Get the extension's ID
 
@@ -64,8 +66,8 @@ async function saveAs(){
         document.getElementById("currentProgress").innerText= "Successfully Downloaded";//Informs user of successful download
 
         //Undisables max link options
-        // document.getElementById('max_links_op').disabled=false;
-        // document.getElementById('max-links').disabled=false;
+        //document.getElementById('max_links_op').disabled=false;
+        //document.getElementById('max-links').disabled=false;
 
     });
     zip = new JSZip();//Clears the zip for future use
@@ -112,7 +114,6 @@ function getAbsolutePath(relPath, baseUrl) {
   */
 
   let URLconcat = new URL(relPath, baseUrl);
-  console.log('URL concat : ' + URLconcat);
   return URLconcat;
 }
 //checks a url for a duplicate url
@@ -131,8 +132,6 @@ async function scrape_html(url, urlDepth) {
   // Store url recieved from the form
   // let url = urlform.url.value;
   var html = ''; //starts the
-  //let hostname = url.match(/(?<=(http|https):\/\/)(\S+?)(?=\/)/)[0];
-  let hostname = new URL(url).hostname;
   // Asynchronous function to retrieve CSS from links
   async function getCSS(html) {
     var dp = new DOMParser();
@@ -144,119 +143,147 @@ async function scrape_html(url, urlDepth) {
       if (elementRef.getAttribute('rel') === 'stylesheet') {
         // The important of getAttribute is that the return is relative path.
         let relativePath = elementRef.getAttribute('href');
-        console.log('attribute (href) : ' + elementRef.getAttribute('href'));
-        console.log('href : ' + elementRef.href);
         let element = elementRef.href;
-        if (relativePath.search('https://') == -1) {
+        if (relativePath.search('https://') == -1) {   //Change path to absolute path if it's relative
           element = getAbsolutePath(relativePath, url);
         }
-        console.log('element : ' + element);
 
-
-        let cssText = await getData(element);
-        if (cssText !== 'Failed') {
-          try {
-            
-            // Waits for the function to fulfill promise then set data to cssText
-            //console.log(cssText)
-
-            // Wrap data into <sytle> tags to append to html
-
-            //THIs block of code essentially takes background images and downloads them
-            //Note, svgs are not a part of this
-            var i = 0;
-            while (!omitImgs && cssText.indexOf('background-image:url(', i) !== -1) {
-              //Replaces Bg Images and Downloads them
-              var bg = cssText.substring(
-                cssText.indexOf('background-image:url(', i)
-              );
-              var bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')'));
-              var imageName = '';
-              if (bgIni.lastIndexOf('?') !== -1) {
-                imageName = bgIni.substring(
-                  bgIni.lastIndexOf('/') + 1,
-                  bgIni.lastIndexOf('?')
-                );
-              } else {
-                imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
-              }
-              console.log(bgIni);
-              if (bgIni.indexOf('https') === -1) {
-                var data = await urlToPromise(
-                  'https://' + new URL(url).hostname + bgIni
-                );
-                zip.file('img/' + imageName, data, { binary: true });
-              } else {
-                zip.file('img/' + imageName, urlToPromise(bgIni), {
-                  binary: true,
-                });
-              }
-              if (depth >=1) {
-                cssText = cssText.replace(bgIni, '../img/' + imageName);
-              }
-              else {
-                cssText = cssText.replace(bgIni, 'img/' + imageName);
-              }
-              //console.log(bgIni + " => "+"https://"+(new URL(url)).hostname+bgIni + " => img/" + imageName );
-              i = cssText.indexOf('background-image:url(', i) + 1;
+        eString = element.toString();               // This line is used to check duplicate css file
+        let lastPart = eString.toString().substring(eString.lastIndexOf('/')+1); //             //
+        if (!checkDuplicate(lastPart,urlCSS)){
+          try{
+            urlCSS.push({url:lastPart});   
+            let cssText = await getData(element);
+            if (cssText !== 'Failed') {
+                cssText = await get_background_img(cssText);
+                var cssFile = getTitle(element);
+                zip.file('css/' + cssFile + '.css', cssText);
             }
-            var cssFile = getTitle(element);
-            zip.file('css/' + cssFile + '.css', cssText);
-            // Set the href for our stylesheet. If the depth is greater than 1, we need ../css/ 
-            if (urlDepth >= 1) {
+          } catch (err) {
+            console.log(err);
+          }
+        }
+        var cssFile = getTitle(element);
+        if (urlDepth >= 1) {
               elementRef.setAttribute('href', '../css/' + cssFile + '.css');
             }
             else {
               elementRef.setAttribute('href', 'css/' + cssFile + '.css');
             }
-            
             html = PARSEDHTML.documentElement.innerHTML; //updates the current html
-          } catch (err) {
-            console.log(err);
-          }
+          // let cssText = await getData(element);
+          // if (cssText !== 'Failed') {
+          //     try{
+          //     cssText = await get_background_img(cssText);
+          //     var cssFile = getTitle(element);
+          //     zip.file('css/' + cssFile + '.css', cssText);
+          //     // Set the href for our stylesheet. If the depth is greater than 1, we need ../css/ 
+          //     if (urlDepth >= 1) {
+          //       elementRef.setAttribute('href', '../css/' + cssFile + '.css');
+          //     }
+          //     else {
+          //       elementRef.setAttribute('href', 'css/' + cssFile + '.css');
+          //     }
+          //     html = PARSEDHTML.documentElement.innerHTML; //updates the current html
+          //   } catch (err) {
+          //     console.log(err);
+          //   }
+          // }
         }
+      
       }
-    }
     console.log('finished CSS');
     return html;
   }
 
+  const get_background_img = async(data)=>{
+    try {
+            
+      // Waits for the function to fulfill promise then set data to cssText
+      //console.log(cssText)
+
+      // Wrap data into <sytle> tags to append to html
+
+      //THIs block of code essentially takes background images and downloads them
+      //Note, svgs are not a part of this
+      var i = 0;
+      console.log("working on data");
+      console.log(data);
+      while (data.indexOf('background-image:url(', i) !== -1) {
+        //Replaces Bg Images and Downloads them
+        var bg = data.substring(
+          data.indexOf('background-image:url(', i)
+        );
+        var bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')'));
+        // if url("") still contains double quote, the code will get the content inside double quote or single quote
+        if(bgIni.indexOf('"')!==-1 || bgIni.indexOf('\'')!==-1 ){         
+          bgIni = bg.substring(bg.indexOf('url') + 5, bg.indexOf(')')-1);
+        }
+        var imageName = '';
+        if (bgIni.lastIndexOf('?') !== -1) {
+          imageName = bgIni.substring(
+            bgIni.lastIndexOf('/') + 1,
+            bgIni.lastIndexOf('?')
+          );
+        } else {
+          imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
+        }
+        console.log("Image name: " + imageName);
+        if (bgIni.indexOf('https') === -1) {
+          var imageData = await urlToPromise(getAbsolutePath(bgIni,url));
+          zip.file('img/' + imageName, imageData, { binary: true });
+        } else {
+          zip.file('img/' + imageName, urlToPromise(bgIni), {
+            binary: true,
+          });
+        }
+        if (urlDepth>=1)
+          data = data.replace(bgIni, '../img/' + imageName);
+        else 
+          data = data.replace(bgIni, 'img/' + imageName);
+        i = data.indexOf('background-image:url(', i) + 1;
+      }
+      html=data;      
+    } catch (err) {
+      console.log(err);
+    }
+    return html;
+  }
+
   // Function to download image and replace their links with our own
-  async function get_imgs(html) {
+  const get_imgs = async (html) => {
     try {
         // Wait for function to fulfill promise then set HTML data to
         // variable
         var dp = new DOMParser();
         var parsed = dp.parseFromString(html, 'text/html');
         var testImageElements = parsed.getElementsByTagName("img");
-        Array.from(testImageElements).forEach(async (img) => { // for each img element on page, pass the img element to this function
-            let src = img.getAttribute('src');
-
+        Array.from(testImageElements).forEach(async (img) => {
+            let src = img.getAttribute('src')
             let srcset = img.getAttribute('srcset');
-
-            if (src.search('https://') == -1) { // if the image is a relative path
-              src = getAbsolutePath(src, url);
+            var imageName = src.substring(src.lastIndexOf('/') + 1);
+            imageName = imageName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
+            // srcString = src.toString();               // This line is used to check duplicate css file
+            // let lastPart = srcString.toString().substring(srcString.lastIndexOf('/')+1); //
+            if(!checkDuplicate(imageName,urlImage)){
+              urlImage.push({url:imageName}); 
+              if(src.toString().search("//") != -1) {
+                  if(src.toString().search("https:")==-1)// Convert to https:
+                  {
+                    src = "https:"+src;
+                  }
+              }
+              else{
+                  src = getAbsolutePath(src,url)
+              }                              
+              zip.file("img/"+imageName, urlToPromise(src), {binary: true});
             }
-
-            let imageName =  getTitle(src); 
-
-            // Changes the end of imageName to .[file extension]. Example: img_png -> img.png
-            // WARNING: if src is greater than 150 in length , then this will not work due to how getTitle is written.
-            // Therefore, we need to look for a more versatile solution to get the file type of images.
-            let lastUnderscPos = imageName.lastIndexOf('_');
-            imageName = imageName.substring(0, lastUnderscPos) + '.' + imageName.substring(lastUnderscPos + 1);
-
             img.setAttribute('srcset','');
-            if (urlDepth >=1) { // if page is saved to html folder, we exit the folder with ../
-              img.setAttribute("src","../img/"+ imageName);
-            }
-            else { // we download the starting page to the main folder, so we do not need ../
-              img.setAttribute("src","img/"+ imageName);
-            }
-
-            // add the image to our zip file
-            zip.file("img/"+imageName, urlToPromise(src), {binary: true});    
-        });
+            if (urlDepth>=1)
+              img.setAttribute("src","../img/"+imageName);
+            else 
+              img.setAttribute("src","img/"+imageName);
+          });
         html=parsed.documentElement.innerHTML;
         return html;
     } catch (e) {
@@ -264,13 +291,12 @@ async function scrape_html(url, urlDepth) {
     }
     return html;
   }
-
   //Used for getting image data, used in getCSS and get_IMGS
   function urlToPromise(url) {
     return new Promise(function (resolve, reject) {
       JSZipUtils.getBinaryContent(url, function (err, data) {
         if (err) {
-          resolve("error");
+          resolve('Failed To Find Content');
         } else {
           resolve(data);
         }
@@ -288,7 +314,8 @@ async function scrape_html(url, urlDepth) {
           // checks if the user wants to omit images or not
           html = await get_imgs(html); //downloads images
         }
-        if (urlDepth <= depth) {
+        html = await get_background_img(html); // gets back-ground:image in the html text
+        if (urlDepth < depth) {
           //if the max depth is higher than our current depth
 
           //Crawls html for all links
@@ -298,11 +325,11 @@ async function scrape_html(url, urlDepth) {
           for (var j = 0; j < links.length; j++) {
             let relative = links[j].getAttribute('href');
             let link = links[j].href;//Given a link
-            if((link.search('chrome-extension://' + extId)!==-1))//&&link.indexOf('#')===-1))//checks if the link is in the correct format
+            if((link.search('chrome-extension://' + extId)!==-1&&link.indexOf('#')===-1))//checks if the link is in the correct format
              {
               link = getAbsolutePath(relative, url);
             }
-            if (!checkDuplicate(link,urlList) && link.length !== 0 && urlDepth < depth) {
+            if (!checkDuplicate(link,urlList) && link.length !== 0) {
               //if the resulting link is not one that is currently in the list
               console.log('adding to list:' + link);
               urlList.push({ url: link, depth: urlDepth + 1 }); //push it to the list. thus setting it up for more scraping

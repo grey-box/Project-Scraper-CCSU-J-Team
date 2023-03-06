@@ -31,7 +31,7 @@ async function getLinks() {
     document.getElementById('link_alert').innerText =
       'This page has over ' +
       link_limit +
-      ' connected pages, we recommend setting a max depth or limiting links via max links.';
+      ' connected pages, we recommend setting a small depth (less than 2).';
   }
 }
 
@@ -47,14 +47,14 @@ const bc = new BroadcastChannel("scraper_data");
 let params = `scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,
 width=600,height=300,left=100,top=100`;
 
-document.getElementById('submitBtn').addEventListener('click', openWindow);
+document.addEventListener('DOMContentLoaded', openWindow); // When extension opens, open the popup window
 
 // Opens a new window which executes the scraping code from window.js
 function openWindow() {
   let popupWindow = window.open("../window.html", "scraper_window", params);
 }
 
-document.getElementById('submitBtn2').addEventListener('click', send);
+document.getElementById('submitBtn').addEventListener('click', send); // When user submits, send the form data
 
 // sends a message containing the form data from the extension popup window
 function send() {
