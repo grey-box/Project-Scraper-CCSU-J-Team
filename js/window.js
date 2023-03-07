@@ -155,7 +155,7 @@ async function scrape_html(url, urlDepth) {
             urlCSS.push({url:lastPart});   
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
-                cssText = await get_background_img(cssText);
+                cssText = await get_background_img(cssText,"css");
                 var cssFile = getTitle(element);
                 zip.file('css/' + cssFile + '.css', cssText);
             }
@@ -171,24 +171,6 @@ async function scrape_html(url, urlDepth) {
               elementRef.setAttribute('href', 'css/' + cssFile + '.css');
             }
             html = PARSEDHTML.documentElement.innerHTML; //updates the current html
-          // let cssText = await getData(element);
-          // if (cssText !== 'Failed') {
-          //     try{
-          //     cssText = await get_background_img(cssText);
-          //     var cssFile = getTitle(element);
-          //     zip.file('css/' + cssFile + '.css', cssText);
-          //     // Set the href for our stylesheet. If the depth is greater than 1, we need ../css/ 
-          //     if (urlDepth >= 1) {
-          //       elementRef.setAttribute('href', '../css/' + cssFile + '.css');
-          //     }
-          //     else {
-          //       elementRef.setAttribute('href', 'css/' + cssFile + '.css');
-          //     }
-          //     html = PARSEDHTML.documentElement.innerHTML; //updates the current html
-          //   } catch (err) {
-          //     console.log(err);
-          //   }
-          // }
         }
       
       }
@@ -196,7 +178,7 @@ async function scrape_html(url, urlDepth) {
     return html;
   }
 
-  const get_background_img = async(data)=>{
+  const get_background_img = async(data,place)=>{
     try {
             
       // Waits for the function to fulfill promise then set data to cssText
@@ -207,18 +189,11 @@ async function scrape_html(url, urlDepth) {
       //THIs block of code essentially takes background images and downloads them
       //Note, svgs are not a part of this
       var i = 0;
-      console.log("working on data");
-      console.log(data);
-      while (data.indexOf('background-image:url(', i) !== -1) {
+      while (data.indexOf('background-image', i) !== -1) {
         //Replaces Bg Images and Downloads them
-        var bg = data.substring(
-          data.indexOf('background-image:url(', i)
-        );
-        var bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')'));
-        // if url("") still contains double quote, the code will get the content inside double quote or single quote
-        if(bgIni.indexOf('"')!==-1 || bgIni.indexOf('\'')!==-1 ){         
-          bgIni = bg.substring(bg.indexOf('url') + 5, bg.indexOf(')')-1);
-        }
+        var bg = data.substring(data.indexOf('background-image', i));
+        bgIni = bg.substring(bg.indexOf('url(') + 5, bg.indexOf(')')-1); // take a string from url to )
+        //bgIni = bg.replace(/\s/g, '') // remove space in the string bgIni
         var imageName = '';
         if (bgIni.lastIndexOf('?') !== -1) {
           imageName = bgIni.substring(
@@ -228,7 +203,7 @@ async function scrape_html(url, urlDepth) {
         } else {
           imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
         }
-        console.log("Image name: " + imageName);
+
         if (bgIni.indexOf('https') === -1) {
           var imageData = await urlToPromise(getAbsolutePath(bgIni,url));
           zip.file('img/' + imageName, imageData, { binary: true });
@@ -237,11 +212,15 @@ async function scrape_html(url, urlDepth) {
             binary: true,
           });
         }
-        if (urlDepth>=1)
+        if(place =="css") // if file data is css
           data = data.replace(bgIni, '../img/' + imageName);
-        else 
-          data = data.replace(bgIni, 'img/' + imageName);
-        i = data.indexOf('background-image:url(', i) + 1;
+        else { // else if file data is html
+            if (urlDepth>=1)
+            data = data.replace(bgIni, '../img/' + imageName);
+          else 
+            data = data.replace(bgIni, 'img/' + imageName);
+        }
+        i = data.indexOf('background-image', i) + 1;
       }
       html=data;      
     } catch (err) {
@@ -314,7 +293,7 @@ async function scrape_html(url, urlDepth) {
           // checks if the user wants to omit images or not
           html = await get_imgs(html); //downloads images
         }
-        html = await get_background_img(html); // gets back-ground:image in the html text
+        html = await get_background_img(html,"html"); // gets back-ground:image in the html text
         if (urlDepth < depth) {
           //if the max depth is higher than our current depth
 
