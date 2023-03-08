@@ -155,7 +155,7 @@ async function scrape_html(url, urlDepth) {
             urlCSS.push({url:lastPart});   
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
-                cssText = await get_background_img(cssText,"css");
+                cssText = await get_background_img(cssText,"css",element);
                 var cssFile = getTitle(element);
                 zip.file('css/' + cssFile + '.css', cssText);
             }
@@ -178,7 +178,7 @@ async function scrape_html(url, urlDepth) {
     return html;
   }
 
-  const get_background_img = async(data,place)=>{
+  const get_background_img = async(data,place,urlFile)=>{
     try {
             
       // Waits for the function to fulfill promise then set data to cssText
@@ -203,9 +203,8 @@ async function scrape_html(url, urlDepth) {
         } else {
           imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
         }
-
         if (bgIni.indexOf('https') === -1) {
-          var imageData = await urlToPromise(getAbsolutePath(bgIni,url));
+          var imageData = await urlToPromise(getAbsolutePath(bgIni,urlFile));
           zip.file('img/' + imageName, imageData, { binary: true });
         } else {
           zip.file('img/' + imageName, urlToPromise(bgIni), {
@@ -293,7 +292,7 @@ async function scrape_html(url, urlDepth) {
           // checks if the user wants to omit images or not
           html = await get_imgs(html); //downloads images
         }
-        html = await get_background_img(html,"html"); // gets back-ground:image in the html text
+        html = await get_background_img(html,"html",url); // gets back-ground:image in the html text
         if (urlDepth < depth) {
           //if the max depth is higher than our current depth
 
