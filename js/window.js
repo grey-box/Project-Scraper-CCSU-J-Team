@@ -13,9 +13,11 @@ bc.addEventListener('message', (event) => {
   saveAs();
 });
 
-var urlList = []; //initializes empty urls
+// initializes empty lists for duplicate checking
+var urlList = [];
 var urlCSS = [];
 var urlImage = [];
+var urlJS = [];
 
 var extId = chrome.runtime.id; // Get the extension's ID
 
@@ -181,6 +183,49 @@ async function scrape_html(url, urlDepth) {
     return html;
   }
 
+  // Asynchronous function to retrieve Javascript files from script tags
+  async function getJavascript(html) {
+    var dp = new DOMParser();
+    var PARSEDHTML = dp.parseFromString(html, 'text/html');
+    var scriptElements = PARSEDHTML.getElementsByTagName('script'); // this contains all script elements
+    for (const elementRef of scriptElements) { // iterate through script elements
+      let elementSrc = elementRef.getAttribute('src');
+      if(elementSrc !== null) { // only attempt to download if the script tag has a src, otherwise do nothing
+        if (elementSrc.toString().search('https://') == -1) {
+          //Change path to absolute path if it's relative
+          elementSrc = getAbsolutePath(elementSrc, url);
+        }
+        let eString = elementSrc.toString(); // This line is used to check duplicate js file
+        let lastPart = eString
+          .toString()
+          .substring(eString.lastIndexOf('/') + 1); //            
+        if (!checkDuplicate(lastPart, urlJS)) {
+          try {
+            urlJS.push({ url: lastPart });
+            let scriptText = await getData(elementSrc); // get the js data
+            if (scriptText !== 'Failed') {
+              var scriptFile = getTitle(elementSrc);
+              zip.file('js/' + scriptFile + '.js', scriptText); // add to the zip file
+            }
+          } catch (err) {
+            console.log(err);
+          }
+        }
+        var scriptFile = getTitle(elementSrc);
+        // update html with proper path, if the depth is 0 we do not want ../
+        if (urlDepth >= 1) {
+          elementRef.setAttribute('src', '../js/' + scriptFile + '.js');
+        } else {
+          elementRef.setAttribute('src', 'js/' + scriptFile + '.js');
+        }
+
+        html = PARSEDHTML.documentElement.innerHTML; //updates the current html
+      }
+    }
+
+    return html;
+  }
+
   const get_background_img = async (data, place, urlFile) => {
     try {
       // Waits for the function to fulfill promise then set data to cssText
@@ -310,6 +355,7 @@ async function scrape_html(url, urlDepth) {
     try {
       html = await getData(url); //gets html of the url
       try {
+        html = await getJavascript(html); // download external Javascript files
         html = await getCSS(html); //downloads css
         if (!omitImgs) {
           // checks if the user wants to omit images or not
