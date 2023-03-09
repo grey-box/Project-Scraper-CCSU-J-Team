@@ -184,11 +184,8 @@ async function scrape_html(url, urlDepth) {
   const get_background_img = async (data, place, urlFile) => {
     try {
       // Waits for the function to fulfill promise then set data to cssText
-      //console.log(cssText)
-
       // Wrap data into <sytle> tags to append to html
-
-      //THIs block of code essentially takes background images and downloads them
+      //This block of code essentially takes background images and downloads them
       //Note, svgs are not a part of this
       const regex = /background-image\s*:\s*url\s*\(\s*/;
       var bg = data.substring(data.search(regex));
@@ -197,9 +194,9 @@ async function scrape_html(url, urlDepth) {
         //Replaces Bg Images and Downloads them
         bg = data.substring(data.search(regex));
         var bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')')); // take a string from url to )
-        // Trim url
+        // Trim url with some case in each if statement. These if statement need to be in order.
         var path;
-        if(bgIni.search("xmlns")===-1){ // handle url contain xmlns
+        if(bgIni.search("xmlns")===-1){ // handle url contain xmlns, svgs
           if (bgIni.search("'") !== -1) {
             bgIni = bgIni.substring(bgIni.indexOf("'")+1, bgIni.lastIndexOf("'"));
           }
@@ -210,13 +207,14 @@ async function scrape_html(url, urlDepth) {
             bgIni = bgIni.replace('//', 'https://');
           }
           bgIni = bgIni.replace('\\', '');
-          //Get path
+          //Get path 
+          // Depends on absolute path or relative path
           if (bgIni.search('http') !== -1) {
             path = bgIni;
           } else {
             path = getAbsolutePath(bgIni, urlFile);
           }
-          //Get image name
+          //Get image name by get the part after /
           var imageName = '';
           if (bgIni.lastIndexOf('?') !== -1) {
             imageName = bgIni.substring(
@@ -227,14 +225,14 @@ async function scrape_html(url, urlDepth) {
             imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
           }
           //Zip file 
-          if (!checkDuplicate(imageName, urlImage)) {
+          if (!checkDuplicate(imageName, urlImage)) { // check Duplicate file before zipping file
             urlImage.push({ url: imageName });
             zip.file('img/' + imageName, urlToPromise(path), { binary: true });
             if (place == 'css')
-              // if file data is css
+              // if file data is css, path go back to main folder and go into img folder
               data = data.replace(bgIni, '../img/' + imageName);
             else {
-              // else if file data is html
+              // else if file data is html, it depends on the depth of html to giving the href
               if (urlDepth >= 1) data = data.replace(bgIni, '../img/' + imageName);
               else data = data.replace(bgIni, 'img/' + imageName);
               }
