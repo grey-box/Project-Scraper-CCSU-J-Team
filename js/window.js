@@ -296,7 +296,58 @@ async function scrape_html(url, urlDepth) {
     }
     return data;
   };
-
+  const get_links = async(html) =>{
+    if (urlDepth < depth) {
+      //if the max depth is higher than our current depth
+      //Crawls html for all links
+      // Parsing html text to  DOM object
+      var parser = new DOMParser();
+      var parsed = parser.parseFromString(html, 'text/html');
+      var links = parsed.getElementsByTagName('a');
+      for (var j = 0; j < links.length; j++) {
+        let relative = links[j].getAttribute('href'); // Given a relative path
+        let link = links[j].href; //Given a link
+        // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file. 
+        if(link.toString().search("mailto")===-1 && link.toString().search("tel")===-1 && link.toString().search("#")===-1){            
+          if (link.search('chrome-extension://' + extId) !== -1)
+           {
+            //checks if the link is in the correct format
+            link = getAbsolutePath(relative, url);
+          }
+          if (!checkDuplicate(link, urlList) && link.length !== 0) {
+            //if the resulting link is not one that is currently in the list
+            console.log('adding to list:' + link);
+            urlList.push({ url: link, depth: urlDepth + 1 }); //push it to the list. thus setting it up for more scraping
+            // ----- get PDF file --------
+            if(link.toString().search('.pdf')!==-1){
+              try { 
+                pdfName = getTitle(link)
+                zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true })
+                if (urlDepth>=1){ // Set the proper href values if they are pdf file
+                  links[j].setAttribute('href',"../pdf/"+ pdfName )
+                }else {
+                  links[j].setAttribute('href',"pdf/"+ pdfName )
+                }
+                } catch (error) {
+                console.error(error);
+              }
+            }// end get PDF File
+            else {
+              // Set the proper href values for our page if they are html file
+              let linkTitle = getTitle(link);
+              if (urlDepth >= 1) {
+                links[j].setAttribute('href', linkTitle + '.html'); // when the depth >=1, we have already set the html/ part, so this avoids linking to /html/html...
+              } else {
+                links[j].setAttribute('href', 'html/' + linkTitle + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
+              }
+            }
+          }
+        }
+        html = parsed.documentElement.innerHTML;
+      }
+    }
+    return html;
+  }
   // Function to download image and replace their links with our own
   const get_imgs = async (html) => {
     try {
@@ -360,46 +411,15 @@ async function scrape_html(url, urlDepth) {
           html = await get_imgs(html); //downloads images
         }
         html = await get_background_img(html, 'html', url); // gets back-ground:image in the html text
-        if (urlDepth < depth) {
-          //if the max depth is higher than our current depth
-
-          //Crawls html for all links
-          var parser = new DOMParser();
-          var parsed = parser.parseFromString(html, 'text/html');
-          var links = parsed.getElementsByTagName('a');
-          for (var j = 0; j < links.length; j++) {
-            let relative = links[j].getAttribute('href');
-            let link = links[j].href; //Given a link
-            if (
-              link.search('chrome-extension://' + extId) !== -1 &&
-              link.indexOf('#') === -1
-            ) {
-              //checks if the link is in the correct format
-              link = getAbsolutePath(relative, url);
-            }
-            if (!checkDuplicate(link, urlList) && link.length !== 0) {
-              //if the resulting link is not one that is currently in the list
-              console.log('adding to list:' + link);
-              urlList.push({ url: link, depth: urlDepth + 1 }); //push it to the list. thus setting it up for more scraping
-            }
-            // Set the proper href values for our page
-            let linkTitle = getTitle(link);
-            if (urlDepth >= 1) {
-              links[j].setAttribute('href', linkTitle + '.html'); // when the depth >=1, we have already set the html/ part, so this avoids linking to /html/html...
-            } else {
-              links[j].setAttribute('href', 'html/' + linkTitle + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
-            }
-          }
-          html = parsed.documentElement.innerHTML; //gets the resulting html
-        }
-        return html;
+        html = await get_links(html);      
       } catch (err) {
         console.log(err);
       }
+      return html;
     } catch (err) {
       console.log(err);
     }
-  };
-
+  }
+  
   return await scrape(url); //returns the result of crawl/scrape
 }
