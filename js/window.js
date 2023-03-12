@@ -162,7 +162,7 @@ async function scrape_html(url, urlDepth) {
             urlCSS.push({ url: lastPart });
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
-              cssText = await get_background_img(cssText, 'css', element);
+              cssText = await get_css_img(cssText, 'css', element);
               var cssFile = getTitle(element);
               zip.file('css/' + cssFile + '.css', cssText);
             }
@@ -226,13 +226,13 @@ async function scrape_html(url, urlDepth) {
     return html;
   }
 
-  const get_background_img = async (data, place, urlFile) => {
+  const get_css_img = async (data, place, urlFile) => {
     try {
       // Waits for the function to fulfill promise then set data to cssText
       // Wrap data into <sytle> tags to append to html
       //This block of code essentially takes background images and downloads them
       //Note, svgs are not a part of this
-      const regex = /background-image\s*:\s*url\s*\(\s*/;
+      const regex = /url\s*\(\s*/;
       var bg = data.substring(data.search(regex));
       var count =0;
       while (bg.search(regex) !== -1 && count <=100) { //limit the loop because some url cannot handle
@@ -269,18 +269,21 @@ async function scrape_html(url, urlDepth) {
           } else {
             imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
           }
+
+          // replace the file with the appropriate path
+          if (place == 'css')
+            // if file data is css, path go back to main folder and go into img folder
+            data = data.replace(bgIni, '../img/' + imageName);
+          else {
+            // else if file data is html, it depends on the depth of html to giving the href
+            if (urlDepth >= 1) data = data.replace(bgIni, '../img/' + imageName);
+            else data = data.replace(bgIni, 'img/' + imageName);
+          }
+
           //Zip file 
           if (!checkDuplicate(imageName, urlImage)) { // check Duplicate file before zipping file
             urlImage.push({ url: imageName });
             zip.file('img/' + imageName, urlToPromise(path), { binary: true });
-            if (place == 'css')
-              // if file data is css, path go back to main folder and go into img folder
-              data = data.replace(bgIni, '../img/' + imageName);
-            else {
-              // else if file data is html, it depends on the depth of html to giving the href
-              if (urlDepth >= 1) data = data.replace(bgIni, '../img/' + imageName);
-              else data = data.replace(bgIni, 'img/' + imageName);
-              }
           } // end replace and download image
           count++;
           bg = data.substring(data.search(regex) + 20);  
@@ -410,7 +413,7 @@ async function scrape_html(url, urlDepth) {
           // checks if the user wants to omit images or not
           html = await get_imgs(html); //downloads images
         }
-        html = await get_background_img(html, 'html', url); // gets back-ground:image in the html text
+        html = await get_css_img(html, 'html', url); // gets back-ground:image in the html text
         html = await get_links(html);      
       } catch (err) {
         console.log(err);
