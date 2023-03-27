@@ -12,26 +12,26 @@ let getData = async (url) => {
 //This fills the starting url with the current tabs url, and starts the getLinks() method
 chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
   console.log(tabs[0].url);
-  const urlForm = document.getElementById('urlFormInput');
-  urlForm.value = tabs[0].url;
+  const urlInput = document.getElementById('url-input');
+  urlInput.value = tabs[0].url;
   getLinks();
 });
 
 //Given a limit, displays a warning if it is available
 var overLimit = false;
 async function getLinks() {
-  var html = await getData(document.getElementById('urlFormInput').value);
+  var html = await getData(document.getElementById('url-input').value);
   var parser = new DOMParser();
   var parsed = parser.parseFromString(html, 'text/html');
   var links = parsed.getElementsByTagName('a');
-  var link_limit = 100; //This link limit IS adjustable, if the number of links on the start page is over this, then a warning will appear
+  var linkLimit = 100; //This link limit IS adjustable, if the number of links on the start page is over this, then a warning will appear
   overLimit = links.length > link_limit;
   if (overLimit) {
-    document.getElementById('link_alert').hidden = false;
-    document.getElementById('link_alert').innerText =
-      'This page has over ' +
-      link_limit +
-      ' connected pages, we recommend setting a small depth (less than 2).';
+    document.getElementById('link-alert').hidden = false;
+    document.getElementById('link-alert').innerText =
+      'This page links to over ' +
+      linkLimit +
+      ' pages, we recommend setting a small depth (less than 2) for a faster download.';
   }
 }
 
@@ -72,11 +72,11 @@ function openWindow() {
   let popupWindow = window.open("../window.html", "scraper_window", params);
 }
 
-document.getElementById('submitBtn').addEventListener('click', send); // When user submits, send the form data
+document.getElementById('submit-btn').addEventListener('click', send); // When user submits, send the form data
 
 // sends a message containing the form data from the extension popup window
 function send() {
-  bc.postMessage([document.getElementById('urlFormInput').value, document.getElementById('depth-input').value, document.getElementById('omit-imgs').checked]);
+  bc.postMessage([document.getElementById('url-input').value, document.getElementById('depth-input').value, document.getElementById('omit-imgs').checked]);
 }
 
 document.querySelector('#go-to-options').addEventListener('click', function() {

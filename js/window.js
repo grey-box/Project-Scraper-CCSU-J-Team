@@ -24,22 +24,11 @@ var extId = chrome.runtime.id; // Get the extension's ID
 var depth = 0; //sets the default depth of the crawl
 var zip = new JSZip(); //creates a new file to hold the zipped contents
 
-// Currently, max links is disabled. We will decide if we should or how to reimplement this during sprint 3.
 async function saveAs() {
   urlList[0] = { url: startingUrlInput, depth: 0 }; //sets the first url to the depth of 0
-  // var max_links = document.getElementById('max-links').value; //gets the value of the max links (if it exists)
   depth = depthInput; //gets the max depth input by the user
-  // document.getElementById('max_links_op').disabled=true;//checkbox disabled during crawling
-  // document.getElementById('max-links').disabled=true;//max links textbox also disabeled during crawling
   for (var i = 0; i < urlList.length; i++) {
-    //If the crawler was given max links, update the progress bar based on max_links
-    // if(document.getElementById('max_links_op').checked)
-    // {
-    //   document.getElementById("currentProgress").innerText="Progress: "+Math.ceil(i/max_links*100).toString()+"%";
-    //   document.getElementById("progress-bar").style="width:"+Math.ceil(i/max_links*100).toString()+"%";
-    // }
-    // else{ //If the crawler is not given max_links, then the progress bar will estimate based on the remaining links (based on max depths)
-    document.getElementById('currentProgress').innerText =
+    document.getElementById('current-progress').innerText =
       'Progress: ' + Math.ceil((i / urlList.length) * 100).toString() + '%';
     document.getElementById('progress-bar').style =
       'width:' + Math.ceil((i / urlList.length) * 100).toString() + '%';
@@ -64,15 +53,11 @@ async function saveAs() {
       })
       .catch(
         (err) =>
-          (document.getElementById('currentProgress').innerText = 'error')
+          (document.getElementById('current-progress').innerText = 'error')
       );
 
-    document.getElementById('currentProgress').innerText =
+    document.getElementById('current-progress').innerText =
       'Successfully Downloaded'; //Informs user of successful download
-
-    //Undisables max link options
-    //document.getElementById('max_links_op').disabled=false;
-    //document.getElementById('max-links').disabled=false;
   });
   zip = new JSZip(); //Clears the zip for future use
 }
@@ -133,8 +118,6 @@ function checkDuplicate(e, list) {
 
 //GIVEN THE URL AND URL_DEPTH, updates the zip files and adds more urls to the list
 async function scrape_html(url, urlDepth) {
-  // Store url recieved from the form
-  // let url = urlform.url.value;
   var html = ''; //starts the
   // Asynchronous function to retrieve CSS from links
   async function getCSS(html) {
