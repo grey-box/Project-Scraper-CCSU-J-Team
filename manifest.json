@@ -8,6 +8,12 @@
 		"48": "images/Picture4_48.png",
 		"16": "images/Picture4_16.png"
 	  },
+
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  
   "background": {
     "service_worker": "background.js"
   },

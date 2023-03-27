@@ -9,7 +9,7 @@ let getData = async (url) => {
   return result;
 };
 
-//This method fills the starting url with the current tabs url. and starts the getLinks() method
+//This fills the starting url with the current tabs url, and starts the getLinks() method
 chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
   console.log(tabs[0].url);
   const urlForm = document.getElementById('urlFormInput');
@@ -35,6 +35,20 @@ async function getLinks() {
   }
 }
 
+// Set the appropriate options values from chrome.storage
+function fillOptions() {
+  chrome.storage.sync.get(
+    (items) => {
+      console.log(items.depth);
+      document.getElementById('depth-input').value = items.depth;
+      document.getElementById('omit-imgs').checked = items.omitImages;
+      // The following is commented out since we do not have these options implemented
+      // document.getElementById('omit-video').checked = items.omitVideo;
+      // document.getElementById('restrict-domain').checked = items.restrictDomain;
+    }
+  );
+}
+
 var extId = chrome.runtime.id;
 // document.addEventListener('DOMContentLoaded', popupFunction); //When extension is opened, popupFunction is ran
 
@@ -45,9 +59,13 @@ const bc = new BroadcastChannel("scraper_data");
 
 // parameters for the window we will open
 let params = `scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,
-width=600,height=300,left=100,top=100`;
+width=375,height=275,left=100,top=100`;
 
-document.addEventListener('DOMContentLoaded', openWindow); // When extension opens, open the popup window
+// When extension opens, fill the values from options, and open the popup window
+document.addEventListener('DOMContentLoaded', () => {
+  fillOptions();
+  openWindow();
+}); 
 
 // Opens a new window which executes the scraping code from window.js
 function openWindow() {
@@ -58,5 +76,10 @@ document.getElementById('submitBtn').addEventListener('click', send); // When us
 
 // sends a message containing the form data from the extension popup window
 function send() {
-  bc.postMessage([document.getElementById('urlFormInput').value, document.getElementById('depthFormInput').value, document.getElementById('omit_imgs').checked]);
+  bc.postMessage([document.getElementById('urlFormInput').value, document.getElementById('depth-input').value, document.getElementById('omit-imgs').checked]);
 }
+
+document.querySelector('#go-to-options').addEventListener('click', function() {
+  console.log("Opening options")
+  chrome.runtime.openOptionsPage();
+});

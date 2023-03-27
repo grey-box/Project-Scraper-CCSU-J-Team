@@ -24,11 +24,11 @@
       </div>
       
       <div class="col-12 input-group-sm">
-        <label class="d-inline-block" for="depthFormInput">Depth</label>
+        <label class="d-inline-block" for="depth-input">Depth</label>
         <div class="tooltip2">&#x1F6C8;
           <span class="tooltiptext2">Each time a new page is visited it is one level deeper than the last page</span>
         </div>
-        <input class="d-inline-block" type="number" name="depth" min="0" max="10" class="form-control" id="depthFormInput" placeholder="0-10" value="1">
+        <input class="d-inline-block" type="number" name="depth" min="0" max="10" class="form-control" id="depth-input" placeholder="0-10" value="1">
       </div>
 
       <!-- <div class="col-12 input-group-sm" id="max_links_div" hidden>
@@ -57,8 +57,8 @@
 
           <div class="col-12">
             <div class="form-check">
-              <label class="form-check-label" for="omit_imgs">
-                <input class="form-check-input" name="omit_imgs" type="checkbox" id="omit_imgs">
+              <label class="form-check-label" for="omit-imgs">
+                <input class="form-check-input" name="omit-imgs" type="checkbox" id="omit-imgs">
                 Omit Images
               </label>
               <div class="tooltip2">&#x1F6C8;
@@ -73,12 +73,13 @@
         </div>
       </form>
       <div class="col-12 mb-2">
-        <button id="submitBtn" type="submit" class="btn btn-secondary btn-sm">Download</button>
+        <button id="submitBtn" type="submit" class="btn btn-primary btn-sm">Download</button>
         <a class="btn btn-success btn-sm" href="./tutorial.html" target="_blank">Tutorial</a>
 
       </div>
     </form>
 
+    <button class="btn btn-sm btn-secondary" id="go-to-options">Go to options</button>
 
     <script src="js/jszip.js"></script>
     <script src="js/jszip-utils.js"></script>
