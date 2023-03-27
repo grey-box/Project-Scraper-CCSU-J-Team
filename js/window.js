@@ -324,12 +324,12 @@ async function scrape_html(url, urlDepth) {
             // ----- get PDF file --------
             if(link.toString().search('.pdf')!==-1){
               try { 
-                pdfName = getTitle(link)
-                zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true })
+                pdfName = getTitle(link) + ".pdf";
+                zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
                 if (urlDepth>=1){ // Set the proper href values if they are pdf file
-                  links[j].setAttribute('href',"../pdf/"+ pdfName )
+                  links[j].setAttribute('href',"../pdf/"+ pdfName );
                 }else {
-                  links[j].setAttribute('href',"pdf/"+ pdfName )
+                  links[j].setAttribute('href',"pdf/"+ pdfName );
                 }
                 } catch (error) {
                 console.error(error);
