@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Opens a new window which executes the scraping code from window.js
 function openWindow() {
-  let popupWindow = window.open("../window.html", "scraper_window", params);
+  let popupWindow = window.open("../html/window.html", "scraper_window", params);
 }
 
 document.getElementById('submit-btn').addEventListener('click', send); // When user submits, send the form data
