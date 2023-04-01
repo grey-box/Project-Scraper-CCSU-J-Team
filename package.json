@@ -1,0 +1,33 @@
+{
+  "name": "web-scraper-j-team",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "webpack --watch --mode production",
+    "pack": "webpack --mode production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grey-box/Web-Scraper-J-Team.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/grey-box/Web-Scraper-J-Team/issues"
+  },
+  "homepage": "https://github.com/grey-box/Web-Scraper-J-Team#readme",
+  "devDependencies": {
+    "copy-webpack-plugin": "^11.0.0",
+    "html-webpack-plugin": "^5.5.0",
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.1"
+  },
+  "dependencies": {
+    "bootstrap": "^5.2.3",
+    "jquery": "^3.6.3",
+    "jszip": "^3.10.1",
+    "jszip-utils": "^0.1.0"
+  }
+}
