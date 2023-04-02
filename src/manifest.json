@@ -30,7 +30,8 @@
     "webRequest", 
     "storage",
     "tabs",
-    "downloads"
+    "downloads",
+    "contextMenus"
   ],
 
 

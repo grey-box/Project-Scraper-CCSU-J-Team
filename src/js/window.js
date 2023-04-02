@@ -140,7 +140,7 @@ async function scrape_html(url, urlDepth) {
           element = getAbsolutePath(relativePath, url);
         }
 
-        eString = element.toString(); // This line is used to check duplicate css file
+        let eString = element.toString(); // This line is used to check duplicate css file
         let lastPart = eString
           .toString()
           .substring(eString.lastIndexOf('/') + 1); //             //
