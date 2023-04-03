@@ -33,12 +33,12 @@ async function saveAs() {
     document.getElementById('progress-bar').style =
       'width:' + Math.ceil((i / urlList.length) * 100).toString() + '%';
     // }
-    var html_response = '<p>Error has occured</p>'; //Default html if something goes wrong with the
-    html_response = await scrape_html(urlList[i].url, urlList[i].depth); //scrapes the pages and returns html
-    if (i == 0) {
-      zip.file(getTitle(urlList[i].url) + '.html', html_response); // Puts the starting webpage in the main directory
+    var htmlResponse = '<p>Error has occured</p>'; //Default html if something goes wrong with the
+    htmlResponse = await scrapeHtml(urlList[i].url, urlList[i].depth); //scrapes the pages and returns html
+    if (i === 0) {
+      zip.file(getTitle(urlList[i].url) + '.html', htmlResponse); // Puts the starting webpage in the main directory
     } else
-      zip.file('html/' + getTitle(urlList[i].url) + '.html', html_response); //The rest of the links are placed in the html folder
+      zip.file('html/' + getTitle(urlList[i].url) + '.html', htmlResponse); //The rest of the links are placed in the html folder
   }
 
   console.log('loop is finished'); //scraping of all pages is done
@@ -91,7 +91,7 @@ let checkUrl = async (url) => {
       return false;
     }
   } catch (error) {
-    console.log('Error:', error);
+    console.error('Error:', error);
   }
 };
 function getAbsolutePath(relPath, baseUrl) {
@@ -117,7 +117,7 @@ function checkDuplicate(e, list) {
 }
 
 //GIVEN THE URL AND URL_DEPTH, updates the zip files and adds more urls to the list
-async function scrape_html(url, urlDepth) {
+async function scrapeHtml(url, urlDepth) {
   var html = ''; //starts the
   // Asynchronous function to retrieve CSS from links
   async function getCSS(html) {
@@ -131,7 +131,7 @@ async function scrape_html(url, urlDepth) {
         // The important of getAttribute is that the return is relative path.
         let relativePath = elementRef.getAttribute('href');
         let element = elementRef.href;
-        if (relativePath.search('https://') == -1) {
+        if (relativePath.search('https://') === -1) {
           //Change path to absolute path if it's relative
           element = getAbsolutePath(relativePath, url);
         }
@@ -145,12 +145,12 @@ async function scrape_html(url, urlDepth) {
             urlCSS.push({ url: lastPart });
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
-              cssText = await get_css_img(cssText, 'css', element);
+              cssText = await getCSSImg(cssText, 'css', element);
               var cssFile = getTitle(element);
               zip.file('css/' + cssFile + '.css', cssText);
             }
           } catch (err) {
-            console.log(err);
+            console.error(err);
           }
         }
         var cssFile = getTitle(element);
@@ -162,7 +162,6 @@ async function scrape_html(url, urlDepth) {
         html = PARSEDHTML.documentElement.innerHTML; //updates the current html
       }
     }
-    console.log('finished CSS');
     return html;
   }
 
@@ -174,7 +173,7 @@ async function scrape_html(url, urlDepth) {
     for (const elementRef of scriptElements) { // iterate through script elements
       let elementSrc = elementRef.getAttribute('src');
       if(elementSrc !== null) { // only attempt to download if the script tag has a src, otherwise do nothing
-        if (elementSrc.toString().search('https://') == -1) {
+        if (elementSrc.toString().search('https://') === -1) {
           //Change path to absolute path if it's relative
           elementSrc = getAbsolutePath(elementSrc, url);
         }
@@ -191,7 +190,7 @@ async function scrape_html(url, urlDepth) {
               zip.file('js/' + scriptFile + '.js', scriptText); // add to the zip file
             }
           } catch (err) {
-            console.log(err);
+            console.error(err);
           }
         }
         var scriptFile = getTitle(elementSrc);
@@ -209,7 +208,7 @@ async function scrape_html(url, urlDepth) {
     return html;
   }
 
-  const get_css_img = async (data, place, urlFile) => {
+  const getCSSImg = async (data, place, urlFile) => {
     try {
       // Waits for the function to fulfill promise then set data to cssText
       // Wrap data into <sytle> tags to append to html
@@ -254,7 +253,7 @@ async function scrape_html(url, urlDepth) {
           }
 
           // replace the file with the appropriate path
-          if (place == 'css')
+          if (place === 'css')
             // if file data is css, path go back to main folder and go into img folder
             data = data.replace(bgIni, '../img/' + imageName);
           else {
@@ -278,11 +277,11 @@ async function scrape_html(url, urlDepth) {
       }
       return data;
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
     return data;
   };
-  const get_links = async(html) =>{
+  const getLinks = async(html) =>{
     if (urlDepth < depth) {
       //if the max depth is higher than our current depth
       //Crawls html for all links
@@ -335,7 +334,7 @@ async function scrape_html(url, urlDepth) {
     return html;
   }
   // Function to download image and replace their links with our own
-  const get_imgs = async (html) => {
+  const getImgs = async (html) => {
     try {
       // Wait for function to fulfill promise then set HTML data to
       // variable
@@ -351,8 +350,8 @@ async function scrape_html(url, urlDepth) {
         // let lastPart = srcString.toString().substring(srcString.lastIndexOf('/')+1); //
         if (!checkDuplicate(imageName, urlImage)) {
           urlImage.push({ url: imageName });
-          if (src.toString().search('//') != -1) {
-            if (src.toString().search('https:') == -1) {
+          if (src.toString().search('//') !== -1) {
+            if (src.toString().search('https:') === -1) {
               // Convert to https:
               src = 'https:' + src;
             }
@@ -367,12 +366,12 @@ async function scrape_html(url, urlDepth) {
       });
       html = parsed.documentElement.innerHTML;
       return html;
-    } catch (e) {
-      console.log(url);
+    } catch (err) {
+      console.error(err);
     }
     return html;
   };
-  //Used for getting image data, used in getCSS and get_IMGS
+  //Used for getting image data, used in getCSS and getImgs
   function urlToPromise(url) {
     return new Promise(function (resolve, reject) {
       JSZipUtils.getBinaryContent(url, function (err, data) {
@@ -394,16 +393,16 @@ async function scrape_html(url, urlDepth) {
         html = await getCSS(html); //downloads css
         if (!omitImgs) {
           // checks if the user wants to omit images or not
-          html = await get_imgs(html); //downloads images
+          html = await getImgs(html); //downloads images
         }
-        html = await get_css_img(html, 'html', url); // gets back-ground:image in the html text
-        html = await get_links(html);      
+        html = await getCSSImg(html, 'html', url); // gets back-ground:image in the html text
+        html = await getLinks(html);      
       } catch (err) {
-        console.log(err);
+        console.error(err);
       }
       return html;
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   }
   

@@ -1,12 +1,12 @@
-let getData = async (url) => {
-  console.log('getData:', 'Getting data from URL');
-  var result = '';
+const getData = async (url) => {
+  let result = '';
   try {
     result = $.get(url);
+    return result;
   } catch (e) {
+    console.error(e);
     return 'Failed';
   }
-  return result;
 };
 
 //This fills the starting url with the current tabs url, and starts the getLinks() method
@@ -25,7 +25,7 @@ async function getLinks() {
   var parsed = parser.parseFromString(html, 'text/html');
   var links = parsed.getElementsByTagName('a');
   var linkLimit = 100; //This link limit IS adjustable, if the number of links on the start page is over this, then a warning will appear
-  overLimit = links.length > link_limit;
+  overLimit = links.length > linkLimit;
   if (overLimit) {
     document.getElementById('link-alert').hidden = false;
     document.getElementById('link-alert').innerText =
@@ -48,11 +48,6 @@ function fillOptions() {
     }
   );
 }
-
-var extId = chrome.runtime.id;
-// document.addEventListener('DOMContentLoaded', popupFunction); //When extension is opened, popupFunction is ran
-
-var urlList = []; //initializes empty urls
 
 // Create BroadcastChannel for sending messages, called scraper_data
 const bc = new BroadcastChannel("scraper_data");
