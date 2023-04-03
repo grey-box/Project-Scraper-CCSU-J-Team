@@ -1,4 +1,4 @@
-import $ from 'jquery';
+//import $ from 'jquery';
 import 'bootstrap';
 import JSZip from 'jszip';
 import * as JSZipUtils from 'jszip-utils';
@@ -7,41 +7,83 @@ import * as JSZipUtils from 'jszip-utils';
 var startingUrlInput;
 var depthInput;
 var omitImgs;
-var html_response = '';
+
 
 // initializes empty lists for duplicate checking
-var urlList = [];
-var urlCSS = [];
-var urlImage = [];
-var urlJS = [];
+const urlList = new Set();
+const urlCSS = new Set();
+const urlImage = new Set();
+const urlJS = new Set();
+const urlPdf = new Set();
 
 // Initial variables
 var zip = new JSZip(); //creates a new file to hold the zipped contents
 var extId = chrome.runtime.id; // Get the extension's ID
 
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   // Handle the message received from the background script
   console.log('got messeg from background');
   if (request.greeting === 'downloadPage') {
     //When extension is opened, popupFunction is ran
-    downloadPage();
-    sendResponse(html_response);
-    console.log('sent this to background');
-    console.log(html_response);
+    //downloadPage();
+    //sendResponse(html_response);
+    startingUrlInput = document.URL;
+    depthInput = 1;
+    await get_links(startingUrlInput, depthInput);
+    await downloadPage();
+    console.log('list of url : \n');
+    console.log(urlList);
   }
 });
-
+const get_links = async (startUrlInput, depthInput) => {
+  urlList.add({ url: startUrlInput, depth: 0 });
+  for (const element of urlList) {
+    if (element.depth <= depthInput) {
+      let html = await getData(element.url);
+      var parser = new DOMParser();
+      var parsed = parser.parseFromString(html, 'text/html');
+      var links = parsed.getElementsByTagName('a');
+      for (var j = 0; j < links.length; j++) {
+        let relative = links[j].getAttribute('href'); // Given a relative path
+        let link = links[j].href; //Given a absolute link contain protocol : chrome-extension://
+        // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file.
+        if (
+          link.toString().search('mailto') === -1 &&
+          link.toString().search('tel') === -1 &&
+          link.toString().search('#') === -1
+        ) {
+          if (link.search('chrome-extension://' + extId) !== -1) {
+            //checks if the link is in the correct format
+            link = getAbsolutePath(relative, element.url);
+          }
+          if (!checkDuplicate(link, urlList) && link.length !== 0) {
+            //console.log("add a url to urlList : ");
+            //console.log(link);
+            urlList.add({ url: link, depth: element.depth + 1 });
+          }
+        }
+      }
+    }
+  }
+};
 async function downloadPage() {
   console.log('get into download function');
-  startingUrlInput = document.URL;
-  depthInput = 0;
-  urlList[0] = { url: startingUrlInput, depth: 0 };
-  html_response = await scrape_html(urlList[0].url, urlList[0].depth);
-  if (urlList[0].depth == 0) {
-    zip.file(getTitle(urlList[0].url) + '.html', html_response); // Puts the starting webpage in the main directory
-  } else {
-    zip.file('html/' + getTitle(urlList[0].url) + '.html', html_response); //The rest of the links are placed in the html folder
-  }
+
+  // Download multiple file URLs
+  const promises = Array.from(urlList).map( (urlElement) => {
+    let html_response = scrape_html(urlElement.url, urlElement.depth);
+    if (urlElement.depth == 0) {
+      zip.file(getTitle(urlElement.url) + '.html', html_response); // Puts the starting webpage in the main directory
+    } else {
+      zip.file('html/' + getTitle(urlElement.url) + '.html', html_response); //The rest of the links are placed in the html folder
+    }
+    return html_response;
+  });
+  const websiteDataArray = await Promise.all(promises);
+  // Process website data
+  console.log(websiteDataArray);
+
+  // Send content to background
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     console.log('sending content to background');
     //Block of Code Downloads the zip
@@ -67,14 +109,20 @@ function getTitle(url) {
 
 //Method that makes requests to the get html,css,and image blobs
 let getData = async (url) => {
-  console.log('getData:', 'Getting data from URL');
+  //console.log('getData:', 'Getting data from URL');
   var result = '';
   try {
-    result = $.get(url);
-  } catch (e) {
-    return 'Failed';
+    let response = await fetch(url);
+    if (response.ok) {
+      result = await response.text();
+      return result;
+    } else {
+      // in case fetch url is return 404 not found
+      return 'NOT_FOUND';
+    }
+  } catch (error) {
+    return 'FAILED';
   }
-  return result;
 };
 // Check a url for working
 
@@ -89,14 +137,13 @@ function getAbsolutePath(relPath, baseUrl) {
   let URLconcat = new URL(relPath, baseUrl);
   return URLconcat;
 }
-//checks a url for a duplicate url
-function checkDuplicate(e, list) {
-  for (var i = 0; i < list.length; i++) {
-    if (e === list[i].url) {
-      console.log('Duplicate found ' + e);
+//checks a url for a duplicate url for a set
+function checkDuplicate(e, set) {
+  set.forEach((element) => {
+    if (element.url === e) {
       return true;
     }
-  }
+  });
   return false;
 }
 
@@ -124,9 +171,9 @@ async function scrape_html(url, urlDepth) {
         let lastPart = eString
           .toString()
           .substring(eString.lastIndexOf('/') + 1); //             //
-        if (!checkDuplicate(lastPart, urlCSS)) {
+        if (!urlCSS.has(lastPart)) {
           try {
-            urlCSS.push({ url: lastPart });
+            urlCSS.add(lastPart);
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
               cssText = await get_css_img(cssText, 'css', element);
@@ -168,9 +215,9 @@ async function scrape_html(url, urlDepth) {
         let lastPart = eString
           .toString()
           .substring(eString.lastIndexOf('/') + 1); //
-        if (!checkDuplicate(lastPart, urlJS)) {
+        if (!urlJS.has(lastPart)) {
           try {
-            urlJS.push({ url: lastPart });
+            urlJS.add(lastPart);
             let scriptText = await getData(elementSrc); // get the js data
             if (scriptText !== 'Failed') {
               var scriptFile = getTitle(elementSrc);
@@ -259,9 +306,9 @@ async function scrape_html(url, urlDepth) {
           }
 
           //Zip file
-          if (!checkDuplicate(imageName, urlImage)) {
+          if (!urlImage.has(imageName)) {
             // check Duplicate file before zipping file
-            urlImage.push({ url: imageName });
+            urlImage.add(imageName);
             zip.file('img/' + imageName, urlToPromise(path), { binary: true });
           } // end replace and download image
           count++;
@@ -276,61 +323,52 @@ async function scrape_html(url, urlDepth) {
     }
     return data;
   };
-  const get_links = async (html) => {
-    if (urlDepth < depthInput) {
-      //if the max depth is higher than our current depth
-      //Crawls html for all links
-      // Parsing html text to  DOM object
-      var parser = new DOMParser();
-      var parsed = parser.parseFromString(html, 'text/html');
-      var links = parsed.getElementsByTagName('a');
-      for (var j = 0; j < links.length; j++) {
-        let relative = links[j].getAttribute('href'); // Given a relative path
-        let link = links[j].href; //Given a link
-        // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file.
-        if (
-          link.toString().search('mailto') === -1 &&
-          link.toString().search('tel') === -1 &&
-          link.toString().search('#') === -1
-        ) {
-          if (link.search('chrome-extension://' + extId) !== -1) {
-            //checks if the link is in the correct format
-            link = getAbsolutePath(relative, url);
-          }
-          if (!checkDuplicate(link, urlList) && link.length !== 0) {
-            //if the resulting link is not one that is currently in the list
-            console.log('adding to list:' + link);
-            urlList.push({ url: link, depth: urlDepth + 1 }); //push it to the list. thus setting it up for more scraping
-            // ----- get PDF file --------
-            if (link.toString().search('.pdf') !== -1) {
-              try {
-                pdfName = getTitle(link) + '.pdf';
-                zip.file('pdf/' + pdfName, urlToPromise(link), {
-                  binary: true,
-                });
-                if (urlDepth >= 1) {
-                  // Set the proper href values if they are pdf file
-                  links[j].setAttribute('href', '../pdf/' + pdfName);
-                } else {
-                  links[j].setAttribute('href', 'pdf/' + pdfName);
-                }
-              } catch (error) {
-                console.error(error);
-              }
-            } // end get PDF File
-            else {
-              // Set the proper href values for our page if they are html file
-              let linkTitle = getTitle(link);
+  const get_Pdf_setHTMLhref = async (html) => {
+    let dp = new DOMParser();
+    let parsed = dp.parseFromString(html, 'text/html');
+    let links = parsed.getElementsByTagName('a');
+    //----- get PDF file --------
+    for (let i = 0; i < links.length; i++) {
+      let relative = links[i].getAttribute('href'); // Given a relative path
+      let link = links[i].href; //Given a link
+      if (
+        link.toString().search('mailto') === -1 &&
+        link.toString().search('tel') === -1 &&
+        link.toString().search('#') === -1
+      ) {
+        if (link.search('chrome-extension://' + extId) !== -1) {
+          //checks if the link is in the correct format
+          link = getAbsolutePath(relative, url);
+        }
+        // ----- get PDF file --------
+        if (link.toString().search('.pdf') !== -1) {
+          try {
+            if(!urlPdf.has(link)){
+              urlPdf.add(link);
+              pdfName = getTitle(link) + '.pdf';
+              zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
               if (urlDepth >= 1) {
-                links[j].setAttribute('href', linkTitle + '.html'); // when the depth >=1, we have already set the html/ part, so this avoids linking to /html/html...
+                // Set the proper href values if they are pdf file
+                links[j].setAttribute('href', '../pdf/' + pdfName);
               } else {
-                links[j].setAttribute('href', 'html/' + linkTitle + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
+                links[j].setAttribute('href', 'pdf/' + pdfName);
               }
-            }
+          }
+          } catch (error) {
+            console.error(error);
+          }
+        } // end get PDF File
+        else {
+          // Set the proper href values for our page if they are html file
+          let linkTitle = getTitle(link);
+          if (urlDepth >= 1) {
+            links[i].setAttribute('href', linkTitle + '.html'); // when the depth >=1, we have already set the html/ part, so this avoids linking to /html/html...
+          } else {
+            links[i].setAttribute('href', 'html/' + linkTitle + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
           }
         }
-        html = parsed.documentElement.innerHTML;
       }
+      html = parsed.documentElement.innerHTML;
     }
     return html;
   };
@@ -344,13 +382,12 @@ async function scrape_html(url, urlDepth) {
       var testImageElements = parsed.getElementsByTagName('img');
       Array.from(testImageElements).forEach(async (img) => {
         let src = img.getAttribute('src');
-        let srcset = img.getAttribute('srcset');
         var imageName = src.substring(src.lastIndexOf('/') + 1);
         imageName = imageName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
         // srcString = src.toString();               // This line is used to check duplicate css file
         // let lastPart = srcString.toString().substring(srcString.lastIndexOf('/')+1); //
-        if (!checkDuplicate(imageName, urlImage)) {
-          urlImage.push({ url: imageName });
+        if (!urlImage.has(imageName)) {
+          urlImage.add(imageName);
           if (src.toString().search('//') != -1) {
             if (src.toString().search('https:') == -1) {
               // Convert to https:
@@ -397,7 +434,7 @@ async function scrape_html(url, urlDepth) {
           html = await get_imgs(html); //downloads images
         }
         html = await get_css_img(html, 'html', url); // gets back-ground:image in the html text
-        html = await get_links(html);
+        html = await get_Pdf_setHTMLhref(html);
       } catch (err) {
         console.log(err);
       }
