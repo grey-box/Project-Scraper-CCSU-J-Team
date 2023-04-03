@@ -7,7 +7,8 @@ import * as JSZipUtils from 'jszip-utils';
 var startingUrlInput;
 var depthInput;
 var omitImgs;
-
+var omitVideo;
+var restrictDomain;
 
 // initializes empty lists for duplicate checking
 const urlList = new Set();
@@ -20,45 +21,53 @@ const urlPdf = new Set();
 var zip = new JSZip(); //creates a new file to hold the zipped contents
 var extId = chrome.runtime.id; // Get the extension's ID
 
+//Get value default first
+getValueDefault();
+
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   // Handle the message received from the background script
   console.log('got messeg from background');
   if (request.greeting === 'downloadPage') {
-    //When extension is opened, popupFunction is ran
-    //downloadPage();
-    //sendResponse(html_response);
-    startingUrlInput = document.URL;
-    depthInput = 1;
     await get_links(startingUrlInput, depthInput);
     await downloadPage();
-    console.log('list of url : \n');
-    console.log(urlList);
   }
 });
+
+function getValueDefault() {
+  startingUrlInput = document.URL;
+  chrome.storage.sync.get((items) => {
+    depthInput = items.depth;
+    omitImgs = items.omitImages;
+    omitVideo = items.omitVideo;
+    restrictDomain = items.restrictDomain;
+  });
+}
 const get_links = async (startUrlInput, depthInput) => {
+  console.log('depth input : ' + depthInput);
   urlList.add({ url: startUrlInput, depth: 0 });
   for (const element of urlList) {
+    //console.log('element url : ' + element.url);
     if (element.depth <= depthInput) {
       let html = await getData(element.url);
       var parser = new DOMParser();
       var parsed = parser.parseFromString(html, 'text/html');
       var links = parsed.getElementsByTagName('a');
       for (var j = 0; j < links.length; j++) {
-        let relative = links[j].getAttribute('href'); // Given a relative path
-        let link = links[j].href; //Given a absolute link contain protocol : chrome-extension://
+        var relative = links[j].getAttribute('href'); // Given a relative path
+        var link = links[j].href; //Given a absolute link contain protocol : chrome-extension://
+        // console.log("relative in link : "+relative);
+        // console.log("href of a link :"+link );
+        // console.log("element url is source of link : "+element.url);
         // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file.
         if (
           link.toString().search('mailto') === -1 &&
           link.toString().search('tel') === -1 &&
-          link.toString().search('#') === -1
+          link.toString().search('#') === -1 &&
+          link.toString() !== '' // in case: tag <a> does NOT contain href attribute
         ) {
-          if (link.search('chrome-extension://' + extId) !== -1) {
-            //checks if the link is in the correct format
-            link = getAbsolutePath(relative, element.url);
-          }
+          link = getAbsolutePath(relative, element.url);
           if (!checkDuplicate(link, urlList) && link.length !== 0) {
-            //console.log("add a url to urlList : ");
-            //console.log(link);
+            //console.log('add link to urlList : ' + link);
             urlList.add({ url: link, depth: element.depth + 1 });
           }
         }
@@ -70,8 +79,8 @@ async function downloadPage() {
   console.log('get into download function');
 
   // Download multiple file URLs
-  const promises = Array.from(urlList).map( (urlElement) => {
-    let html_response = scrape_html(urlElement.url, urlElement.depth);
+  const promises = Array.from(urlList).map(async (urlElement) => {
+    let html_response = await scrape_html(urlElement.url, urlElement.depth);
     if (urlElement.depth == 0) {
       zip.file(getTitle(urlElement.url) + '.html', html_response); // Puts the starting webpage in the main directory
     } else {
@@ -80,8 +89,6 @@ async function downloadPage() {
     return html_response;
   });
   const websiteDataArray = await Promise.all(promises);
-  // Process website data
-  console.log(websiteDataArray);
 
   // Send content to background
   zip.generateAsync({ type: 'blob' }).then(function (content) {
@@ -113,16 +120,11 @@ let getData = async (url) => {
   var result = '';
   try {
     let response = await fetch(url);
-    if (response.ok) {
-      result = await response.text();
-      return result;
-    } else {
-      // in case fetch url is return 404 not found
-      return 'NOT_FOUND';
-    }
+    result = await response.text();
   } catch (error) {
     return 'FAILED';
   }
+  return result;
 };
 // Check a url for working
 
@@ -162,18 +164,11 @@ async function scrape_html(url, urlDepth) {
         // The important of getAttribute is that the return is relative path.
         let relativePath = elementRef.getAttribute('href');
         let element = elementRef.href;
-        if (relativePath.search('https://') == -1) {
-          //Change path to absolute path if it's relative
-          element = getAbsolutePath(relativePath, url);
-        }
-
-        let eString = element.toString(); // This line is used to check duplicate css file
-        let lastPart = eString
-          .toString()
-          .substring(eString.lastIndexOf('/') + 1); //             //
-        if (!urlCSS.has(lastPart)) {
+        element = getAbsolutePath(relativePath, url);
+        if (!urlCSS.has(element)) {
           try {
-            urlCSS.add(lastPart);
+            console.log("element url of css : "+ element);
+            urlCSS.add(element);
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
               cssText = await get_css_img(cssText, 'css', element);
@@ -193,12 +188,14 @@ async function scrape_html(url, urlDepth) {
         html = PARSEDHTML.documentElement.innerHTML; //updates the current html
       }
     }
+    //console.log("urlCSS : "+ urlCSS);
     console.log('finished CSS');
     return html;
   }
 
   // Asynchronous function to retrieve Javascript files from script tags
   async function getJavascript(html) {
+    console.log("get in get Javascript with url : "+url);
     var dp = new DOMParser();
     var PARSEDHTML = dp.parseFromString(html, 'text/html');
     var scriptElements = PARSEDHTML.getElementsByTagName('script'); // this contains all script elements
@@ -324,6 +321,7 @@ async function scrape_html(url, urlDepth) {
     return data;
   };
   const get_Pdf_setHTMLhref = async (html) => {
+    console.log("get in get Pdf_set with url : "+url);
     let dp = new DOMParser();
     let parsed = dp.parseFromString(html, 'text/html');
     let links = parsed.getElementsByTagName('a');
@@ -334,26 +332,24 @@ async function scrape_html(url, urlDepth) {
       if (
         link.toString().search('mailto') === -1 &&
         link.toString().search('tel') === -1 &&
-        link.toString().search('#') === -1
+        link.toString().search('#') === -1 &&
+        link.toString()!==''
       ) {
-        if (link.search('chrome-extension://' + extId) !== -1) {
-          //checks if the link is in the correct format
-          link = getAbsolutePath(relative, url);
-        }
+        link = getAbsolutePath(relative, url);
         // ----- get PDF file --------
         if (link.toString().search('.pdf') !== -1) {
           try {
-            if(!urlPdf.has(link)){
+            let pdfName = getTitle(link) + '.pdf';
+            if (!urlPdf.has(link)) {
               urlPdf.add(link);
-              pdfName = getTitle(link) + '.pdf';
               zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
-              if (urlDepth >= 1) {
-                // Set the proper href values if they are pdf file
-                links[j].setAttribute('href', '../pdf/' + pdfName);
-              } else {
-                links[j].setAttribute('href', 'pdf/' + pdfName);
-              }
-          }
+            }
+            if (urlDepth >= 1) {
+              // Set the proper href values if they are pdf file
+              links[i].setAttribute('href', '../pdf/' + pdfName);
+            } else {
+              links[i].setAttribute('href', 'pdf/' + pdfName);
+            }
           } catch (error) {
             console.error(error);
           }
