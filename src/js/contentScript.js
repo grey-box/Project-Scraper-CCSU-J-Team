@@ -67,7 +67,7 @@ const get_links = async (startUrlInput, depthInput) => {
         ) {
           link = getAbsolutePath(relative, element.url);
           if (!checkDuplicate(link, urlList) && link.length !== 0) {
-            //console.log('add link to urlList : ' + link);
+            // console.log('add a link to urlList : ' + link);
             urlList.add({ url: link, depth: element.depth + 1 });
           }
         }
@@ -89,22 +89,28 @@ async function downloadPage() {
     return html_response;
   });
   const websiteDataArray = await Promise.all(promises);
-
+  console.log('finish all promises');
   // Send content to background
-  zip.generateAsync({ type: 'blob' }).then(function (content) {
-    console.log('sending content to background');
-    //Block of Code Downloads the zip
-    var urlBlob = URL.createObjectURL(content); //
-    let message = {
-      command: 'downloadURLBlob',
-      content: urlBlob,
-    };
-    chrome.runtime.sendMessage({ message: message }, function (response) {
-      console.log('Response from background script:', response);
-    });
-    zip = new JSZip();
+// Generate the zip file as a Blob object
+  zip.generateAsync({ type: "blob" })
+  .then(function(content) {
+    // // Create a new BZip2 instance
+    // const bzip2 = new compressjs.Bzip2();
+    // // Compress the zip file using BZip2
+    // const compressedData = bzip2.compressFile(content);
+  console.log('sending content to background');
+  //Block of Code Downloads the zip
+  var urlBlob = URL.createObjectURL(content); //
+  let message = {
+    command: 'downloadURLBlob',
+    content: urlBlob,
+  };
+  chrome.runtime.sendMessage({ message: message }, function (response) {
+    console.log('Response from background script:', response);
   });
-}
+  });
+  zip = new JSZip();
+  }
 
 //given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
 function getTitle(url) {
@@ -141,11 +147,11 @@ function getAbsolutePath(relPath, baseUrl) {
 }
 //checks a url for a duplicate url for a set
 function checkDuplicate(e, set) {
-  set.forEach((element) => {
-    if (element.url === e) {
+  for (const element of set) {
+    if (element.url.href === e.href) {
       return true;
     }
-  });
+  }
   return false;
 }
 
@@ -165,10 +171,9 @@ async function scrape_html(url, urlDepth) {
         let relativePath = elementRef.getAttribute('href');
         let element = elementRef.href;
         element = getAbsolutePath(relativePath, url);
-        if (!urlCSS.has(element)) {
+        if (!urlCSS.has(element.href)) {
           try {
-            console.log("element url of css : "+ element);
-            urlCSS.add(element);
+            urlCSS.add(element.href);
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
               cssText = await get_css_img(cssText, 'css', element);
@@ -189,13 +194,12 @@ async function scrape_html(url, urlDepth) {
       }
     }
     //console.log("urlCSS : "+ urlCSS);
-    console.log('finished CSS');
+    //console.log('finished CSS');
     return html;
   }
 
   // Asynchronous function to retrieve Javascript files from script tags
   async function getJavascript(html) {
-    console.log("get in get Javascript with url : "+url);
     var dp = new DOMParser();
     var PARSEDHTML = dp.parseFromString(html, 'text/html');
     var scriptElements = PARSEDHTML.getElementsByTagName('script'); // this contains all script elements
@@ -212,9 +216,9 @@ async function scrape_html(url, urlDepth) {
         let lastPart = eString
           .toString()
           .substring(eString.lastIndexOf('/') + 1); //
-        if (!urlJS.has(lastPart)) {
+        if (!urlJS.has(elementSrc.href)) {
           try {
-            urlJS.add(lastPart);
+            urlJS.add(elementSrc.href);
             let scriptText = await getData(elementSrc); // get the js data
             if (scriptText !== 'Failed') {
               var scriptFile = getTitle(elementSrc);
@@ -321,7 +325,7 @@ async function scrape_html(url, urlDepth) {
     return data;
   };
   const get_Pdf_setHTMLhref = async (html) => {
-    console.log("get in get Pdf_set with url : "+url);
+    // console.log('get in get Pdf_set with url : ' + url);
     let dp = new DOMParser();
     let parsed = dp.parseFromString(html, 'text/html');
     let links = parsed.getElementsByTagName('a');
@@ -333,16 +337,16 @@ async function scrape_html(url, urlDepth) {
         link.toString().search('mailto') === -1 &&
         link.toString().search('tel') === -1 &&
         link.toString().search('#') === -1 &&
-        link.toString()!==''
+        link.toString() !== ''
       ) {
         link = getAbsolutePath(relative, url);
         // ----- get PDF file --------
         if (link.toString().search('.pdf') !== -1) {
           try {
             let pdfName = getTitle(link) + '.pdf';
-            if (!urlPdf.has(link)) {
-              urlPdf.add(link);
-              zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
+            if (!urlPdf.has(link.href)) {
+              urlPdf.add(link.href);
+              //zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
             }
             if (urlDepth >= 1) {
               // Set the proper href values if they are pdf file
