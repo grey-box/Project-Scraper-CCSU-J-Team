@@ -79,14 +79,21 @@ async function downloadPage() {
   console.log('get into download function');
 
   // Download multiple file URLs
-  const promises = Array.from(urlList).map((urlElement) => {
-    let html_response = scrape_html(urlElement.url, urlElement.depth);
-    if (urlElement.depth == 0) {
-      zip.file(getTitle(urlElement.url) + '.html', html_response); // Puts the starting webpage in the main directory
-    } else {
-      zip.file('html/' + getTitle(urlElement.url) + '.html', html_response); //The rest of the links are placed in the html folder
-    }
-    return html_response;
+  const promises = Array.from(urlList).map(async (urlElement) => {
+    await scrape_html(urlElement.url, urlElement.depth)
+      .then((html_response) => {
+        if (html_response) {
+          const myBlob = new Blob([html_response], { type: 'text/plain' });
+
+          if (urlElement.depth == 0) {
+            zip.file(getTitle(urlElement.url) + '.html', myBlob); // Puts the starting webpage in the main directory
+          } else {
+            zip.file('html/' + getTitle(urlElement.url) + '.html', myBlob); //The rest of the links are placed in the html folder
+          }
+          return myBlob;
+        }
+      })
+      .catch((error) => console.error(error));
   });
   const websiteDataArray = await Promise.all(promises);
   console.log('finish all promises');
@@ -108,7 +115,7 @@ async function downloadPage() {
       console.log('sending content to background');
       //Block of Code Downloads the zip
       //var urlBlob = URL.createObjectURL(content); //
-      FileSaver.saveAs(content,"scrapedWebsites.zip");
+      FileSaver.saveAs(content, 'scrapedWebsites.zip');
       // let message = {
       //   command: 'downloadURLBlob',
       //   content: urlBlob,
