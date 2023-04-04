@@ -2,7 +2,7 @@
 import 'bootstrap';
 import JSZip from 'jszip';
 import * as JSZipUtils from 'jszip-utils';
-
+import FileSaver from 'file-saver';
 //Global variables
 var startingUrlInput;
 var depthInput;
@@ -79,8 +79,8 @@ async function downloadPage() {
   console.log('get into download function');
 
   // Download multiple file URLs
-  const promises = Array.from(urlList).map(async (urlElement) => {
-    let html_response = await scrape_html(urlElement.url, urlElement.depth);
+  const promises = Array.from(urlList).map((urlElement) => {
+    let html_response = scrape_html(urlElement.url, urlElement.depth);
     if (urlElement.depth == 0) {
       zip.file(getTitle(urlElement.url) + '.html', html_response); // Puts the starting webpage in the main directory
     } else {
@@ -91,26 +91,34 @@ async function downloadPage() {
   const websiteDataArray = await Promise.all(promises);
   console.log('finish all promises');
   // Send content to background
-// Generate the zip file as a Blob object
-  zip.generateAsync({ type: "blob" })
-  .then(function(content) {
-    // // Create a new BZip2 instance
-    // const bzip2 = new compressjs.Bzip2();
-    // // Compress the zip file using BZip2
-    // const compressedData = bzip2.compressFile(content);
-  console.log('sending content to background');
-  //Block of Code Downloads the zip
-  var urlBlob = URL.createObjectURL(content); //
-  let message = {
-    command: 'downloadURLBlob',
-    content: urlBlob,
-  };
-  chrome.runtime.sendMessage({ message: message }, function (response) {
-    console.log('Response from background script:', response);
-  });
-  });
+  // Generate the zip file as a Blob object
+  zip
+    .generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: {
+        level: 1,
+      },
+    })
+    .then(function (content) {
+      // // Create a new BZip2 instance
+      // const bzip2 = new compressjs.Bzip2();
+      // // Compress the zip file using BZip2
+      // const compressedData = bzip2.compressFile(content);
+      console.log('sending content to background');
+      //Block of Code Downloads the zip
+      //var urlBlob = URL.createObjectURL(content); //
+      FileSaver.saveAs(content,"scrapedWebsites.zip");
+      // let message = {
+      //   command: 'downloadURLBlob',
+      //   content: urlBlob,
+      // };
+      // chrome.runtime.sendMessage({ message: message }, function (response) {
+      //   console.log('Response from background script:', response);
+      // });
+    });
   zip = new JSZip();
-  }
+}
 
 //given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
 function getTitle(url) {

@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "bootstrap": "^5.2.3",
+    "file-saver": "^2.0.5",
     "jquery": "^3.6.3",
     "jsdom": "^21.1.1",
     "jszip": "^3.10.1",
