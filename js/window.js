@@ -42,13 +42,14 @@ async function saveAs() {
   }
 
   console.log('loop is finished'); //scraping of all pages is done
+  let zipName = new URL(urlList[0].url).hostname;
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     //Block of Code Downloads the zip
     var urlBlob = URL.createObjectURL(content); //
     chrome.downloads
       .download({
         url: urlBlob,
-        filename: 'scrapedWebsites.zip',
+        filename: zipName+'.zip',
         saveAs: true,
       })
       .catch(
@@ -62,13 +63,7 @@ async function saveAs() {
   zip = new JSZip(); //Clears the zip for future use
 }
 
-//given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
-function getTitle1(url) {
-  url = url.toString();
-  if (url.length >= 150) url = url.substring(url.length - 150);
-  url = url.replace(/[^a-zA-Z0-9 ]/g, '_');
-  return url;
-}
+
 //given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
 function getTitle(url) {
   url = url.toString();
