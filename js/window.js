@@ -2,6 +2,11 @@
 let startingUrlInput;
 let depthInput;
 let omitImgs;
+// initializes empty lists for duplicate checking
+let urlList = [];
+let urlCSS = [];
+let urlImage = [];
+let urlJS = [];
 
 const bc = new BroadcastChannel('scraper_data');
 
@@ -13,27 +18,22 @@ bc.addEventListener('message', (event) => {
   saveAs();
 });
 
-// initializes empty lists for duplicate checking
-var urlList = [];
-var urlCSS = [];
-var urlImage = [];
-var urlJS = [];
 
-var extId = chrome.runtime.id; // Get the extension's ID
+let extId = chrome.runtime.id; // Get the extension's ID
 
-var depth = 0; //sets the default depth of the crawl
-var zip = new JSZip(); //creates a new file to hold the zipped contents
+let depth = 0; //sets the default depth of the crawl
+let zip = new JSZip(); //creates a new file to hold the zipped contents
 
 async function saveAs() {
   urlList[0] = { url: startingUrlInput, depth: 0 }; //sets the first url to the depth of 0
   depth = depthInput; //gets the max depth input by the user
-  for (var i = 0; i < urlList.length; i++) {
+  for (let i = 0; i < urlList.length; i++) {
     document.getElementById('current-progress').innerText =
       'Progress: ' + Math.ceil((i / urlList.length) * 100).toString() + '%';
     document.getElementById('progress-bar').style =
       'width:' + Math.ceil((i / urlList.length) * 100).toString() + '%';
     // }
-    var htmlResponse = '<p>Error has occured</p>'; //Default html if something goes wrong with the
+    let htmlResponse = '<p>Error has occured</p>'; //Default html if something goes wrong with the
     htmlResponse = await scrapeHtml(urlList[i].url, urlList[i].depth); //scrapes the pages and returns html
     if (i === 0) {      
       zip.file(getTitle(urlList[i].url) + '.html', htmlResponse); // Puts the starting webpage in the main directory
@@ -45,7 +45,7 @@ async function saveAs() {
   let zipName = new URL(urlList[0].url).hostname;
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     //Block of Code Downloads the zip
-    var urlBlob = URL.createObjectURL(content); //
+    let urlBlob = URL.createObjectURL(content); //
     chrome.downloads
       .download({
         url: urlBlob,
@@ -74,7 +74,7 @@ function getTitle(url) {
 }
 //Method that makes requests to the get html,css,and image blobs
 let getData = async (url) => {
-  var result = '';
+  let result = '';
   try {
     result = $.get(url);
   } catch (e) {
@@ -108,7 +108,7 @@ function getAbsolutePath(relPath, baseUrl) {
 }
 //checks a url for a duplicate url
 function checkDuplicate(e, list) {
-  for (var i = 0; i < list.length; i++) {
+  for (let i = 0; i < list.length; i++) {
     if (e === list[i].url) {
       return true;
     }
@@ -118,45 +118,47 @@ function checkDuplicate(e, list) {
 
 //GIVEN THE URL AND URL_DEPTH, updates the zip files and adds more urls to the list
 async function scrapeHtml(url, urlDepth) {
-  var html = ''; //starts the
+  let html = ''; //starts the
   // Asynchronous function to retrieve CSS from links
   async function getCSS(html) {
-    var dp = new DOMParser();
-    var PARSEDHTML = dp.parseFromString(html, 'text/html');
-    var linkElements = PARSEDHTML.getElementsByTagName('link');
+    let dp = new DOMParser();
+    let PARSEDHTML = dp.parseFromString(html, 'text/html');
+    let linkElements = PARSEDHTML.getElementsByTagName('link');
     for (const elementRef of linkElements) {
+      html = PARSEDHTML.documentElement.innerHTML; //updates the current html
       // Create a dummy element to transfer <link> tag href to an <a> tag
       // so that JQuery can identify its protocol, hostname, and pathname etc.
-      if (elementRef.getAttribute('rel') === 'stylesheet') {
-        // The important of getAttribute is that the return is relative path.
-        let relativePath = elementRef.getAttribute('href');
-        let element = elementRef.href;
-        if (relativePath.search('https://') === -1) {
-          //Change path to absolute path if it's relative
-          element = getAbsolutePath(relativePath, url);
-        }
-        console.log("url of css : "+element);
-        var cssFile = getTitle(element);
-        console.log("fileName of css : "+cssFile);
-        if (!checkDuplicate(element, urlCSS)) {
-          try {
-            urlCSS.push({ url: element });
-            let cssText = await getData(element);
-            if (cssText !== 'Failed') {
-              cssText = await getCSSImg(cssText, 'css', element);              
-              zip.file('css/' + cssFile + '.css', cssText);
-              console.log("fileName of css is zipped: "+cssFile);
-            }
-          } catch (err) {
-            console.error(err);
-          }
-        }
-        if (urlDepth >= 1) {
-          elementRef.setAttribute('href', '../css/' + cssFile + '.css');
-        } else {
-          elementRef.setAttribute('href', 'css/' + cssFile + '.css');
-        }
-        html = PARSEDHTML.documentElement.innerHTML; //updates the current html
+      if (elementRef.getAttribute('rel') !== 'stylesheet') continue;
+      // The important of getAttribute is that the return is relative path.
+      let relativePath = elementRef.getAttribute('href');
+      let element = elementRef.href;
+      if (relativePath.search('https://') === -1) {
+        //Change path to absolute path if it's relative
+        element = getAbsolutePath(relativePath, url);
+      }
+
+      console.log("url of css : "+element);
+      let cssFile = getTitle(element);
+      console.log("fileName of css : "+cssFile);
+
+      if (urlDepth >= 1) {
+        elementRef.setAttribute('href', '../css/' + cssFile + '.css');
+      } else {
+        elementRef.setAttribute('href', 'css/' + cssFile + '.css');
+      }
+    
+      if (checkDuplicate(element, urlCSS)) continue;
+      try {
+        urlCSS.push({ url: element });
+
+        let cssText = await getData(element);
+        if (cssText === 'Failed') continue;
+
+        cssText = await getCSSImg(cssText, 'css', element);              
+        zip.file('css/' + cssFile + '.css', cssText);
+        console.log("fileName of css is zipped: "+cssFile);
+      } catch (err) {
+        console.error(err);
       }
     }
     return html;
@@ -164,44 +166,40 @@ async function scrapeHtml(url, urlDepth) {
 
   // Asynchronous function to retrieve Javascript files from script tags
   async function getJavascript(html) {
-    var dp = new DOMParser();
-    var PARSEDHTML = dp.parseFromString(html, 'text/html');
-    var scriptElements = PARSEDHTML.getElementsByTagName('script'); // this contains all script elements
+    let dp = new DOMParser();
+    let PARSEDHTML = dp.parseFromString(html, 'text/html');
+    let scriptElements = PARSEDHTML.getElementsByTagName('script'); // this contains all script elements
     for (const elementRef of scriptElements) { // iterate through script elements
       let elementSrc = elementRef.getAttribute('src');
-      if(elementSrc !== null) { // only attempt to download if the script tag has a src, otherwise do nothing
-        if (elementSrc.toString().search('https://') === -1) {
-          //Change path to absolute path if it's relative
-          elementSrc = getAbsolutePath(elementSrc, url);
-        }
-        var scriptFile = getTitle(elementSrc);
-        let eString = elementSrc.toString(); // This line is used to check duplicate js file
-        let lastPart = eString
-          .toString()
-          .substring(eString.lastIndexOf('/') + 1); //            
-        if (!checkDuplicate(lastPart, urlJS)) {
-          try {
-            urlJS.push({ url: lastPart });
-            let scriptText = await getData(elementSrc); // get the js data
-            if (scriptText !== 'Failed') {
+      if(elementSrc === null) continue; // only attempt to download if the script tag has a src, otherwise do nothing
+      if (elementSrc.toString().search('https://') === -1) {
+        //Change path to absolute path if it's relative
+        elementSrc = getAbsolutePath(elementSrc, url);
+      }
+      let scriptFile = getTitle(elementSrc);
+      let eString = elementSrc.toString(); // This line is used to check duplicate js file
+      let lastPart = eString
+        .toString()
+        .substring(eString.lastIndexOf('/') + 1); //  
 
-              zip.file('js/' + scriptFile +".js", scriptText); // add to the zip file
-            }
-          } catch (err) {
-            console.error(err);
-          }
-        }
-        // update html with proper path, if the depth is 0 we do not want ../
-        if (urlDepth >= 1) {
-          elementRef.setAttribute('src', '../js/' + scriptFile +".js" );
-        } else {
-          elementRef.setAttribute('src', 'js/' + scriptFile +".js");
-        }
+      // update html with proper path, if the depth is 0 we do not want ../
+      if (urlDepth >= 1) {
+        elementRef.setAttribute('src', '../js/' + scriptFile +".js" );
+      } else {
+        elementRef.setAttribute('src', 'js/' + scriptFile +".js");
+      }
+      html = PARSEDHTML.documentElement.innerHTML; //updates the current html       
 
-        html = PARSEDHTML.documentElement.innerHTML; //updates the current html
+      if (checkDuplicate(lastPart, urlJS)) continue; 
+      try {
+        urlJS.push({ url: lastPart });
+        let scriptText = await getData(elementSrc); // get the js data
+        if (scriptText === 'Failed') continue;
+        zip.file('js/' + scriptFile +".js", scriptText); // add to the zip file
+      } catch (err) {
+        console.error(err);
       }
     }
-
     return html;
   }
 
@@ -212,65 +210,60 @@ async function scrapeHtml(url, urlDepth) {
       //This block of code essentially takes background images and downloads them
       //Note, svgs are not a part of this
       const regex = /url\s*\(\s*/;
-      var bg = data.substring(data.search(regex));
-      var count =0;
+      let bg = data.substring(data.search(regex));
+      let count =0;
       while (bg.search(regex) !== -1 && count <=100) { //limit the loop because some url cannot handle
         //Replaces Bg Images and Downloads them
         bg = data.substring(data.search(regex));
-        var bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')')); // take a string from url to )
+        let bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')')); // take a string from url to )
         // Trim url with some case in each if statement. These if statement need to be in order.
-        var path;
-        if(bgIni.search("xmlns")===-1){ // handle url contain xmlns, svgs
-          if (bgIni.search("'") !== -1) {
-            bgIni = bgIni.substring(bgIni.indexOf("'")+1, bgIni.lastIndexOf("'"));
-          }
-          if (bgIni.search('"') !== -1) {
-            bgIni = bgIni.substring(bgIni.indexOf('"')+1, bgIni.lastIndexOf('"'));
-          }
-          if (bgIni.search('//') !== -1 && bgIni.indexOf('//')===0) {
-            bgIni = bgIni.replace('//', 'https://');
-          }
-          bgIni = bgIni.replace('\\', '');
-          //Get path 
-          // Depends on absolute path or relative path
-          if (bgIni.search('http') !== -1) {
-            path = bgIni;
-          } else {
-            path = getAbsolutePath(bgIni, urlFile);
-          }
-          //Get image name by get the part after /
-          var imageName = '';
-          if (bgIni.lastIndexOf('?') !== -1) {
-            imageName = bgIni.substring(
-              bgIni.lastIndexOf('/') + 1,
-              bgIni.lastIndexOf('?')
-            );
-          } else {
-            imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
-          }   
-           imageName = imageName.substring(imageName.length - 50);
-          // replace the file with the appropriate path
-          if (place === 'css')
-            // if file data is css, path go back to main folder and go into img folder
-            data = data.replace(bgIni, '../img/' + imageName);
-          else {
-            // else if file data is html, it depends on the depth of html to giving the href
-            if (urlDepth >= 1) data = data.replace(bgIni, '../img/' + imageName);
-            else data = data.replace(bgIni, 'img/' + imageName);
-          }
-
-          //Zip file 
-          if (!checkDuplicate(imageName, urlImage)) { // check Duplicate file before zipping file
-            urlImage.push({ url: imageName });
-            zip.file('img/' + imageName, urlToPromise(path), { binary: true });
-          } // end replace and download image
-          count++;
-          bg = data.substring(data.search(regex) + 20);  
+        let path;
+        if(bgIni.search("xmlns")===-1) break; // handle url contain xmlns, svgs
+        if (bgIni.search("'") !== -1) {
+          bgIni = bgIni.substring(bgIni.indexOf("'")+1, bgIni.lastIndexOf("'"));
         }
-        else{
-          break;
-        }  // end if bgIni contain xmlns
-        
+        if (bgIni.search('"') !== -1) {
+          bgIni = bgIni.substring(bgIni.indexOf('"')+1, bgIni.lastIndexOf('"'));
+        }
+        if (bgIni.search('//') !== -1 && bgIni.indexOf('//')===0) {
+          bgIni = bgIni.replace('//', 'https://');
+        }
+        bgIni = bgIni.replace('\\', '');
+        //Get path 
+        // Depends on absolute path or relative path
+        if (bgIni.search('http') !== -1) {
+          path = bgIni;
+        } else {
+          path = getAbsolutePath(bgIni, urlFile);
+        }
+        //Get image name by get the part after /
+        let imageName = '';
+        if (bgIni.lastIndexOf('?') !== -1) {
+          imageName = bgIni.substring(
+            bgIni.lastIndexOf('/') + 1,
+            bgIni.lastIndexOf('?')
+          );
+        } else {
+          imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
+        }   
+          imageName = imageName.substring(imageName.length - 50);
+        // replace the file with the appropriate path
+        if (place === 'css')
+          // if file data is css, path go back to main folder and go into img folder
+          data = data.replace(bgIni, '../img/' + imageName);
+        else {
+          // else if file data is html, it depends on the depth of html to giving the href
+          if (urlDepth >= 1) data = data.replace(bgIni, '../img/' + imageName);
+          else data = data.replace(bgIni, 'img/' + imageName);
+        }
+
+        //Zip file 
+        if (!checkDuplicate(imageName, urlImage)) { // check Duplicate file before zipping file
+          urlImage.push({ url: imageName });
+          zip.file('img/' + imageName, urlToPromise(path), { binary: true });
+        } // end replace and download image
+        count++;
+        bg = data.substring(data.search(regex) + 20);  
       }
       return data;
     } catch (err) {
@@ -283,49 +276,48 @@ async function scrapeHtml(url, urlDepth) {
       //if the max depth is higher than our current depth
       //Crawls html for all links
       // Parsing html text to  DOM object
-      var parser = new DOMParser();
-      var parsed = parser.parseFromString(html, 'text/html');
-      var links = parsed.getElementsByTagName('a');
-      for (var j = 0; j < links.length; j++) {
+      let parser = new DOMParser();
+      let parsed = parser.parseFromString(html, 'text/html');
+      let links = parsed.getElementsByTagName('a');
+      for (let j = 0; j < links.length; j++) {
         let relative = links[j].getAttribute('href'); // Given a relative path
         let link = links[j].href; //Given a link
-        // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file. 
-        if(link.toString().search("mailto")===-1 && link.toString().search("tel")===-1 && link.toString().search("#")===-1){            
-          if (link.search('chrome-extension://' + extId) !== -1)
-           {
-            //checks if the link is in the correct format
-            link = getAbsolutePath(relative, url);
-          }
-          if (!checkDuplicate(link, urlList) && link.length !== 0) {
-            //if the resulting link is not one that is currently in the list
-            console.log('adding to list:' + link);
-            urlList.push({ url: link, depth: urlDepth + 1 }); //push it to the list. thus setting it up for more scraping
-            // ----- get PDF file --------
-            if(link.toString().search('.pdf')!==-1){
-              try { 
-                pdfName = getTitle(link) + ".pdf";
-                zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
-                if (urlDepth>=1){ // Set the proper href values if they are pdf file
-                  links[j].setAttribute('href',"../pdf/"+ pdfName );
-                }else {
-                  links[j].setAttribute('href',"pdf/"+ pdfName );
-                }
-                } catch (error) {
-                console.error(error);
-              }
-            }// end get PDF File
-            else {
-              // Set the proper href values for our page if they are html file
-              let linkTitle = getTitle(link);
-              if (urlDepth >= 1) {
-                links[j].setAttribute('href', linkTitle + '.html'); // when the depth >=1, we have already set the html/ part, so this avoids linking to /html/html...
-              } else {
-                links[j].setAttribute('href', 'html/' + linkTitle + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
-              }
-            }
-          }
-        }
         html = parsed.documentElement.innerHTML;
+        // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file. 
+        // if the resulting link is not one that is currently in the list
+        if((link.toString().search("mailto")!==-1 || link.toString().search("tel")!==-1 || link.toString().search("#")!==-1)
+          || (checkDuplicate(link,urlList) || link.length === 0))
+          continue;
+
+        //checks if the link is in the correct format
+        if (link.search('chrome-extension://' + extId) !== -1) 
+          link = getAbsolutePath(relative, url);
+
+        console.log('adding to list:' + link);
+        urlList.push({ url: link, depth: urlDepth + 1 }); //push it to the list. thus setting it up for more scraping
+        // ----- get PDF file --------\
+
+        if(link.toString().search('.pdf')===-1){
+          let linkTitle = getTitle(link);
+          if (urlDepth >= 1) {
+            links[j].setAttribute('href', linkTitle + '.html'); // when the depth >=1, we have already set the html/ part, so this avoids linking to /html/html...
+          } else {
+            links[j].setAttribute('href', 'html/' + linkTitle + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
+          }
+          continue;
+        }
+        
+        try { 
+          pdfName = getTitle(link) + ".pdf";
+          zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
+          if (urlDepth>=1){ // Set the proper href values if they are pdf file
+            links[j].setAttribute('href',"../pdf/"+ pdfName );
+          }else {
+            links[j].setAttribute('href',"pdf/"+ pdfName );
+          }
+        } catch (error) {
+          console.error(error);
+        }
       }
     }
     return html;
@@ -335,9 +327,9 @@ async function scrapeHtml(url, urlDepth) {
     try {
       // Wait for function to fulfill promise then set HTML data to
       // variable
-      var dp = new DOMParser();
-      var parsed = dp.parseFromString(html, 'text/html');
-      var testImageElements = parsed.getElementsByTagName('img');
+      let dp = new DOMParser();
+      let parsed = dp.parseFromString(html, 'text/html');
+      let testImageElements = parsed.getElementsByTagName('img');
       Array.from(testImageElements).forEach(async (img) => {
         let src = img.getAttribute('src');
 
@@ -347,7 +339,7 @@ async function scrapeHtml(url, urlDepth) {
         if (src.search("base64")!==-1) return;
 
         // These code is used to check duplicate css file
-        var imageName = src.substring(src.lastIndexOf('/') + 1);
+        let imageName = src.substring(src.lastIndexOf('/') + 1);
         imageName = imageName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
         if (!checkDuplicate(imageName, urlImage)) {
           urlImage.push({ url: imageName });          
