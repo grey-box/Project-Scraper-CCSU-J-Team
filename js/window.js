@@ -35,7 +35,7 @@ async function saveAs() {
     // }
     var htmlResponse = '<p>Error has occured</p>'; //Default html if something goes wrong with the
     htmlResponse = await scrapeHtml(urlList[i].url, urlList[i].depth); //scrapes the pages and returns html
-    if (i === 0) {
+    if (i === 0) {      
       zip.file(getTitle(urlList[i].url) + '.html', htmlResponse); // Puts the starting webpage in the main directory
     } else
       zip.file('html/' + getTitle(urlList[i].url) + '.html', htmlResponse); //The rest of the links are placed in the html folder
@@ -63,16 +63,22 @@ async function saveAs() {
 }
 
 //given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
-function getTitle(url) {
+function getTitle1(url) {
   url = url.toString();
   if (url.length >= 150) url = url.substring(url.length - 150);
   url = url.replace(/[^a-zA-Z0-9 ]/g, '_');
   return url;
 }
-
+//given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
+function getTitle(url) {
+  url = url.toString();
+  url = url.substring(8);
+  if (url.length >= 70) url = url.substring(url.length - 70);
+  url = url.replace(/[^a-zA-Z0-9 ]/g, '_');
+  return url;
+}
 //Method that makes requests to the get html,css,and image blobs
 let getData = async (url) => {
-  console.log('getData:', 'Getting data from URL');
   var result = '';
   try {
     result = $.get(url);
@@ -109,7 +115,6 @@ function getAbsolutePath(relPath, baseUrl) {
 function checkDuplicate(e, list) {
   for (var i = 0; i < list.length; i++) {
     if (e === list[i].url) {
-      console.log('Duplicate found ' + e);
       return true;
     }
   }
@@ -135,25 +140,22 @@ async function scrapeHtml(url, urlDepth) {
           //Change path to absolute path if it's relative
           element = getAbsolutePath(relativePath, url);
         }
-
-        eString = element.toString(); // This line is used to check duplicate css file
-        let lastPart = eString
-          .toString()
-          .substring(eString.lastIndexOf('/') + 1); //             //
-        if (!checkDuplicate(lastPart, urlCSS)) {
+        console.log("url of css : "+element);
+        var cssFile = getTitle(element);
+        console.log("fileName of css : "+cssFile);
+        if (!checkDuplicate(element, urlCSS)) {
           try {
-            urlCSS.push({ url: lastPart });
+            urlCSS.push({ url: element });
             let cssText = await getData(element);
             if (cssText !== 'Failed') {
-              cssText = await getCSSImg(cssText, 'css', element);
-              var cssFile = getTitle(element);
+              cssText = await getCSSImg(cssText, 'css', element);              
               zip.file('css/' + cssFile + '.css', cssText);
+              console.log("fileName of css is zipped: "+cssFile);
             }
           } catch (err) {
             console.error(err);
           }
         }
-        var cssFile = getTitle(element);
         if (urlDepth >= 1) {
           elementRef.setAttribute('href', '../css/' + cssFile + '.css');
         } else {
@@ -177,6 +179,7 @@ async function scrapeHtml(url, urlDepth) {
           //Change path to absolute path if it's relative
           elementSrc = getAbsolutePath(elementSrc, url);
         }
+        var scriptFile = getTitle(elementSrc);
         let eString = elementSrc.toString(); // This line is used to check duplicate js file
         let lastPart = eString
           .toString()
@@ -186,19 +189,18 @@ async function scrapeHtml(url, urlDepth) {
             urlJS.push({ url: lastPart });
             let scriptText = await getData(elementSrc); // get the js data
             if (scriptText !== 'Failed') {
-              var scriptFile = getTitle(elementSrc);
-              zip.file('js/' + scriptFile + '.js', scriptText); // add to the zip file
+
+              zip.file('js/' + scriptFile +".js", scriptText); // add to the zip file
             }
           } catch (err) {
             console.error(err);
           }
         }
-        var scriptFile = getTitle(elementSrc);
         // update html with proper path, if the depth is 0 we do not want ../
         if (urlDepth >= 1) {
-          elementRef.setAttribute('src', '../js/' + scriptFile + '.js');
+          elementRef.setAttribute('src', '../js/' + scriptFile +".js" );
         } else {
-          elementRef.setAttribute('src', 'js/' + scriptFile + '.js');
+          elementRef.setAttribute('src', 'js/' + scriptFile +".js");
         }
 
         html = PARSEDHTML.documentElement.innerHTML; //updates the current html
@@ -230,7 +232,7 @@ async function scrapeHtml(url, urlDepth) {
           if (bgIni.search('"') !== -1) {
             bgIni = bgIni.substring(bgIni.indexOf('"')+1, bgIni.lastIndexOf('"'));
           }
-          if (bgIni.search('//') !== -1) {
+          if (bgIni.search('//') !== -1 && bgIni.indexOf('//')===0) {
             bgIni = bgIni.replace('//', 'https://');
           }
           bgIni = bgIni.replace('\\', '');
@@ -250,8 +252,8 @@ async function scrapeHtml(url, urlDepth) {
             );
           } else {
             imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
-          }
-
+          }   
+           imageName = imageName.substring(imageName.length - 50);
           // replace the file with the appropriate path
           if (place === 'css')
             // if file data is css, path go back to main folder and go into img folder
@@ -343,24 +345,25 @@ async function scrapeHtml(url, urlDepth) {
       var testImageElements = parsed.getElementsByTagName('img');
       Array.from(testImageElements).forEach(async (img) => {
         let src = img.getAttribute('src');
-        let srcset = img.getAttribute('srcset');
+
+        // let lastPart = srcString.toString().substring(srcString.lastIndexOf('/')+1); //
+        // skip a loop in ForEach loop  // return is instead of continue;
+        if(src===null) return;
+        if (src.search("base64")!==-1) return;
+
+        // These code is used to check duplicate css file
         var imageName = src.substring(src.lastIndexOf('/') + 1);
         imageName = imageName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
-        // srcString = src.toString();               // This line is used to check duplicate css file
-        // let lastPart = srcString.toString().substring(srcString.lastIndexOf('/')+1); //
         if (!checkDuplicate(imageName, urlImage)) {
-          urlImage.push({ url: imageName });
-          if (src.toString().search('//') !== -1) {
-            if (src.toString().search('https:') === -1) {
-              // Convert to https:
-              src = 'https:' + src;
-            }
+          urlImage.push({ url: imageName });          
+          if (src.search('//') !== -1) {
+            src = src.substring(src.indexOf('//'));
+            src = "https:" + src;
           } else {
             src = getAbsolutePath(src, url);
           }
           zip.file('img/' + imageName, urlToPromise(src), { binary: true });
         }
-        img.setAttribute('srcset', '');
         if (urlDepth >= 1) img.setAttribute('src', '../img/' + imageName);
         else img.setAttribute('src', 'img/' + imageName);
       });
