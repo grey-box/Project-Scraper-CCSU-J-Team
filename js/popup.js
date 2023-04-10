@@ -54,7 +54,7 @@ const bc = new BroadcastChannel("scraper_data");
 
 // parameters for the window we will open
 let params = `scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,
-width=375,height=275,left=100,top=100`;
+width=375,height=275,left=100,top=100,dependent=yes`;
 
 // When extension opens, fill the values from options, and open the popup window
 document.addEventListener('DOMContentLoaded', () => {
@@ -63,14 +63,16 @@ document.addEventListener('DOMContentLoaded', () => {
 }); 
 
 // Opens a new window which executes the scraping code from window.js
+var popupWindow
 function openWindow() {
-  let popupWindow = window.open("../html/window.html", "scraper_window", params);
+  popupWindow = window.open("../html/window.html", "scraper_window", params);
 }
 
 document.getElementById('submit-btn').addEventListener('click', send); // When user submits, send the form data
 
 // sends a message containing the form data from the extension popup window
 function send() {
+  popupWindow.focus(); // keep the popupWindow appear above the parent window.
   bc.postMessage([document.getElementById('url-input').value, document.getElementById('depth-input').value, document.getElementById('omit-imgs').checked]);
 }
 
