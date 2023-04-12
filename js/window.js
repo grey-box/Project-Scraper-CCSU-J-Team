@@ -6,6 +6,7 @@ let omitImgs;
 let urlList = [];
 let urlCSS = [];
 let urlImage = [];
+let urlVideo = [];
 let urlJS = [];
 
 const bc = new BroadcastChannel('scraper_data');
@@ -361,6 +362,39 @@ async function scrapeHtml(url, urlDepth) {
     }
     return html;
   };
+
+  const getVideos = async (html) => {
+    try{
+      let dp = new DOMParser();
+      let parsed = dp.parseFromString(html, 'text/html');
+      let testVideoElements = parsed.getElementsByTagName('iframe');
+      Array.from(testVideoElements).forEach(async (video) => {
+        let src = video.getAttribute('src');
+
+        if(src===null) return;
+        
+        let videoName = src.substring(src.lastIndexOf('/') + 1);
+        videoName = videoName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
+        if(!checkDuplicate(videoName, urlVideo)) {
+          urlVideo.push({url: videoName});
+          if (src.search('//') !== -1) {
+            src = src.substring(src.indexOf('//'));
+            src = "https:" + src;
+          } else {
+            src = getAbsolutePath(src, url);
+          }
+          zip.file('video/' + videoName, urlToPromise(src), { binary: true });
+        }
+        if (urlDepth >= 1) video.setAttribute('src', '../video/' + videoName);
+        else video.setAttribute('src', 'video/' + videoName);
+      });
+      html = parsed.documentElement.innerHTML;
+      return html;
+    } catch (err) {
+      console.error(err);
+    }
+    return html;
+  };
   //Used for getting image data, used in getCSS and getImgs
   function urlToPromise(url) {
     return new Promise(function (resolve, reject) {
@@ -386,7 +420,8 @@ async function scrapeHtml(url, urlDepth) {
           html = await getImgs(html); //downloads images
         }
         html = await getCSSImg(html, 'html', url); // gets back-ground:image in the html text
-        html = await getLinks(html);      
+        html = await getVideos(html);
+        html = await getLinks(html); 
       } catch (err) {
         console.error(err);
       }
