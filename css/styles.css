@@ -28,3 +28,7 @@ body {
 .tooltip2:hover .tooltiptext2 {
   visibility: visible;
 }
+.sizing {
+  width: 100%;
+  height: 40px;
+}

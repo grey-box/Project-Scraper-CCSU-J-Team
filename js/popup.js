@@ -12,7 +12,7 @@ const getData = async (url) => {
 //This fills the starting url with the current tabs url, and starts the getLinks() method
 chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
   console.log(tabs[0].url);
-  const urlInput = document.getElementById('url-input');
+  const urlInput = document.getElementById('urlFormInput');
   urlInput.value = tabs[0].url;
   getLinks();
 });
@@ -20,7 +20,7 @@ chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
 //Given a limit, displays a warning if it is available
 var overLimit = false;
 async function getLinks() {
-  var html = await getData(document.getElementById('url-input').value);
+  var html = await getData(document.getElementById('urlFormInput').value);
   var parser = new DOMParser();
   var parsed = parser.parseFromString(html, 'text/html');
   var links = parsed.getElementsByTagName('a');
@@ -73,7 +73,7 @@ document.getElementById('submit-btn').addEventListener('click', send); // When u
 // sends a message containing the form data from the extension popup window
 function send() {
   popupWindow.focus(); // keep the popupWindow appear above the parent window.
-  bc.postMessage([document.getElementById('url-input').value, document.getElementById('depth-input').value, document.getElementById('omit-imgs').checked]);
+  bc.postMessage([document.getElementById('urlFormInput').value, document.getElementById('depth-input').value, document.getElementById('omit-imgs').checked]);
 }
 
 document.querySelector('#go-to-options').addEventListener('click', function() {
