@@ -50,7 +50,7 @@ function fillOptions() {
 }
 
 // Create BroadcastChannel for sending messages, called scraper_data
-const bc = new BroadcastChannel("scraper_data");
+const bc = new BroadcastChannel('scraper_data');
 
 // parameters for the window we will open
 let params = `scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,
@@ -63,9 +63,22 @@ document.addEventListener('DOMContentLoaded', () => {
 }); 
 
 // Opens a new window which executes the scraping code from window.js
-var popupWindow
+let popupWindow;
 function openWindow() {
-  popupWindow = window.open("../html/window.html", "scraper_window", params);
+  // open window and assign the WindowProxy object to popupWindow
+  popupWindow = window.open('../html/window.html', 'scraper_window', params);
+  // once the window is loaded, add a listeners
+  popupWindow.onload = function () {
+    // try to prevent user from closing the window
+    popupWindow.addEventListener('beforeunload', function(event) {
+      event.preventDefault();
+      event.returnValue = 'Are you sure? Closing the popup window will prevent the extension from working.';
+    });
+    // if the user closes the window, tell the user how to reopen it
+    popupWindow.addEventListener('unload', function(event) {
+      alert('The popup window was closed. Please reopen the extension to get it back.');
+    });
+  }
 }
 
 document.getElementById('submit-btn').addEventListener('click', send); // When user submits, send the form data
@@ -77,6 +90,6 @@ function send() {
 }
 
 document.querySelector('#go-to-options').addEventListener('click', function() {
-  console.log("Opening options")
+  console.log('Opening options')
   chrome.runtime.openOptionsPage();
 });
