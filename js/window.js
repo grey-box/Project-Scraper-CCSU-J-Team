@@ -43,7 +43,7 @@ async function saveAs() {
   }
 
   console.log('loop is finished'); //scraping of all pages is done
-  let zipName = new URL(urlList[0].url).hostname;
+  let zipName = new URL(startingUrlInput).hostname;
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     //Block of Code Downloads the zip
     let urlBlob = URL.createObjectURL(content); //
@@ -126,7 +126,7 @@ async function scrapeHtml(url, urlDepth) {
     let PARSEDHTML = dp.parseFromString(html, 'text/html');
     let linkElements = PARSEDHTML.getElementsByTagName('link');
     for (const elementRef of linkElements) {
-      html = PARSEDHTML.documentElement.innerHTML; //updates the current html
+
       // Create a dummy element to transfer <link> tag href to an <a> tag
       // so that JQuery can identify its protocol, hostname, and pathname etc.
       if (elementRef.getAttribute('rel') !== 'stylesheet') continue;
@@ -147,7 +147,7 @@ async function scrapeHtml(url, urlDepth) {
       } else {
         elementRef.setAttribute('href', 'css/' + cssFile + '.css');
       }
-    
+      html = PARSEDHTML.documentElement.innerHTML; //updates the current html
       if (checkDuplicate(element, urlCSS)) continue;
       try {
         urlCSS.push({ url: element });
@@ -283,7 +283,6 @@ async function scrapeHtml(url, urlDepth) {
       for (let j = 0; j < links.length; j++) {
         let relative = links[j].getAttribute('href'); // Given a relative path
         let link = links[j].href; //Given a link
-        html = parsed.documentElement.innerHTML;
         // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file. 
         // if the resulting link is not one that is currently in the list
         if((link.toString().search("mailto")!==-1 || link.toString().search("tel")!==-1 || link.toString().search("#")!==-1)
@@ -319,6 +318,8 @@ async function scrapeHtml(url, urlDepth) {
         } catch (error) {
           console.error(error);
         }
+        html = parsed.documentElement.innerHTML;
+
       }
     }
     return html;
