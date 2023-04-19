@@ -16,6 +16,7 @@ bc.addEventListener('message', (event) => {
   startingUrlInput = event.data[0];
   depthInput = event.data[1];
   omitImgs = event.data[2];
+  setFlagDownload("True")
   saveAs();
 });
 
@@ -60,10 +61,14 @@ async function saveAs() {
 
     document.getElementById('current-progress').innerText =
       'Successfully Downloaded'; //Informs user of successful download
-  });
+    setFlagDownload("False")
+    });
   zip = new JSZip(); //Clears the zip for future use
 }
-
+// Set flag download
+function setFlagDownload(bool){
+  chrome.storage.sync.set({'flagDownload':bool})
+}
 
 //given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
 function getTitle(url) {

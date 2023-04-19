@@ -48,7 +48,10 @@ function fillOptions() {
     }
   );
 }
-
+ 
+function setFlagDownload(bool){
+  chrome.storage.sync.set({'flagDownload':bool})
+}
 // Create BroadcastChannel for sending messages, called scraper_data
 const bc = new BroadcastChannel('scraper_data');
 
@@ -60,6 +63,7 @@ width=375,height=275,left=100,top=100,dependent=yes`;
 document.addEventListener('DOMContentLoaded', () => {
   fillOptions();
   openWindow();
+  setFlagDownload("False");
 }); 
 
 // Opens a new window which executes the scraping code from window.js
@@ -81,14 +85,28 @@ function openWindow() {
   }
 }
 
-document.getElementById('submit-btn').addEventListener('click', send); // When user submits, send the form data
+document.getElementById('submit-btn').addEventListener('click', checkFlagDownload); // When user submits, send the form data
 
 // sends a message containing the form data from the extension popup window
 function send() {
   popupWindow.focus(); // keep the popupWindow appear above the parent window.
   bc.postMessage([document.getElementById('urlFormInput').value, document.getElementById('depth-input').value, document.getElementById('omit-imgs').checked]);
 }
+// Function to turn on the flag to check it is downloading
+function checkFlagDownload(){
+  let flag 
+  chrome.storage.sync.get((items) =>{
+    flag = items.flagDownload
+    if (flag == "False") // Flag is off. It means the page is not downloaded 
+      {
+        send();
+      }
+    else {
+      alert('The program is in the download process.\nPlease wait until it finishes!');
+    }
+  })
 
+}
 document.querySelector('#go-to-options').addEventListener('click', function() {
   console.log('Opening options')
   chrome.runtime.openOptionsPage();
