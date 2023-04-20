@@ -20,6 +20,11 @@ body {
   border-radius: 6px;
   padding: 5px 0;
 
+   /* Position the tooltip on the left side */
+   left: -20px; /* Update the left property value to adjust the distance from the component */
+   top: 110%; /* Update the top property value to vertically center the tooltip */
+   transform: translateY(-50%); /* Update the transform property value to vertically center the tooltip */
+
   /* Position the tooltip */
   position: absolute;
   z-index: 1;

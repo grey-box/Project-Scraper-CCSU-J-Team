@@ -33,6 +33,18 @@ async function getLinks() {
       linkLimit +
       ' pages, we recommend setting a small depth (less than 2) for a faster download.';
   }
+    // Get the input element
+  var myInput = document.getElementById("depth-input");
+
+  // Add event listener for change event
+  myInput.addEventListener("click", function(event) {
+    // Handle the change event
+    const alert = bootstrap.Alert.getOrCreateInstance('#alert-depth')
+    setTimeout(function() {
+      // Use Bootstrap's .close method to close the alert
+      alert.close()
+    }, 5000); 
+  });
 }
 
 // Set the appropriate options values from chrome.storage
@@ -102,7 +114,11 @@ function checkFlagDownload(){
         send();
       }
     else {
-      alert('The program is in the download process.\nPlease wait until it finishes!');
+        // Create a new instance of the Bootstrap toast
+        var toast = new bootstrap.Toast($('#myToast'));
+        
+        // Show the toast
+        toast.show();
     }
   })
 
