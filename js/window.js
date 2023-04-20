@@ -220,56 +220,61 @@ async function scrapeHtml(url, urlDepth) {
       let count =0;
       while (bg.search(regex) !== -1 && count <=100) { //limit the loop because some url cannot handle
         //Replaces Bg Images and Downloads them
-        bg = data.substring(data.search(regex));
-        let bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')')); // take a string from url to )
-        // Trim url with some case in each if statement. These if statement need to be in order.
-        let path;
-        if(bgIni.search("xmlns")===-1) break; // handle url contain xmlns, svgs
-        if (bgIni.search("'") !== -1) {
-          bgIni = bgIni.substring(bgIni.indexOf("'")+1, bgIni.lastIndexOf("'"));
-        }
-        if (bgIni.search('"') !== -1) {
-          bgIni = bgIni.substring(bgIni.indexOf('"')+1, bgIni.lastIndexOf('"'));
-        }
-        if (bgIni.search('//') !== -1 && bgIni.indexOf('//')===0) {
-          bgIni = bgIni.replace('//', 'https://');
-        }
-        bgIni = bgIni.replace('\\', '');
-        //Get path 
-        // Depends on absolute path or relative path
-        if (bgIni.search('http') !== -1) {
-          path = bgIni;
-        } else {
-          path = getAbsolutePath(bgIni, urlFile);
-        }
-        //Get image name by get the part after /
-        let imageName = '';
-        if (bgIni.lastIndexOf('?') !== -1) {
-          imageName = bgIni.substring(
-            bgIni.lastIndexOf('/') + 1,
-            bgIni.lastIndexOf('?')
-          );
-        } else {
-          imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
-        }   
-          imageName = imageName.substring(imageName.length - 50);
-        // replace the file with the appropriate path
-        if (place === 'css')
-          // if file data is css, path go back to main folder and go into img folder
-          data = data.replace(bgIni, '../img/' + imageName);
-        else {
-          // else if file data is html, it depends on the depth of html to giving the href
-          if (urlDepth >= 1) data = data.replace(bgIni, '../img/' + imageName);
-          else data = data.replace(bgIni, 'img/' + imageName);
-        }
+        try {
+          bg = data.substring(data.search(regex));
+          let bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')')); // take a string from url to )
+          // Trim url with some case in each if statement. These if statement need to be in order.
+          let path;
+          if(bgIni.search("xmlns")!==-1) break; // handle url contain xmlns, svgs
+          if (bgIni.search("'") !== -1) {
+            bgIni = bgIni.substring(bgIni.indexOf("'")+1, bgIni.lastIndexOf("'"));
+          }
+          if (bgIni.search('"') !== -1) {
+            bgIni = bgIni.substring(bgIni.indexOf('"')+1, bgIni.lastIndexOf('"'));
+          }
+          if (bgIni.search('//') !== -1 && bgIni.indexOf('//')===0) {
+            bgIni = bgIni.replace('//', 'https://');
+          }
+          bgIni = bgIni.replace('\\', '');
+          //Get path 
+          // Depends on absolute path or relative path
+          if (bgIni.search('http') !== -1) {
+            path = bgIni;
+          } else {
+            path = getAbsolutePath(bgIni, urlFile);
+          }
+          //Get image name by get the part after /
+          let imageName = '';
+          if (bgIni.lastIndexOf('?') !== -1) {
+            imageName = bgIni.substring(
+              bgIni.lastIndexOf('/') + 1,
+              bgIni.lastIndexOf('?')
+            );
+          } else {
+            imageName = bgIni.substring(bgIni.lastIndexOf('/') + 1);
+          }   
+            imageName = imageName.substring(imageName.length - 50);
+          // replace the file with the appropriate path
+          if (place === 'css')
+            // if file data is css, path go back to main folder and go into img folder
+            data = data.replace(bgIni, '../img/' + imageName);
+          else {
+            // else if file data is html, it depends on the depth of html to giving the href
+            if (urlDepth >= 1) data = data.replace(bgIni, '../img/' + imageName);
+            else data = data.replace(bgIni, 'img/' + imageName);
+          }
 
-        //Zip file 
-        if (!checkDuplicate(imageName, urlImage)) { // check Duplicate file before zipping file
-          urlImage.push({ url: imageName });
-          zip.file('img/' + imageName, urlToPromise(path), { binary: true });
-        } // end replace and download image
-        count++;
-        bg = data.substring(data.search(regex) + 20);  
+          //Zip file 
+          if (!checkDuplicate(imageName, urlImage)) { // check Duplicate file before zipping file
+            urlImage.push({ url: imageName });
+            zip.file('img/' + imageName, urlToPromise(path), { binary: true });
+          } // end replace and download image
+          count++;
+          bg = data.substring(data.search(regex) + 20);
+        }  
+        catch (err) {
+          console.error(err);
+        }
       }
       return data;
     } catch (err) {
@@ -277,6 +282,7 @@ async function scrapeHtml(url, urlDepth) {
     }
     return data;
   };
+
   const getLinks = async(html) =>{
     if (urlDepth < depth) {
       //if the max depth is higher than our current depth
@@ -309,6 +315,7 @@ async function scrapeHtml(url, urlDepth) {
           } else {
             links[j].setAttribute('href', 'html/' + linkTitle + '.html'); //This line of code essentially makes it so the user can navigate all the pages they scraped when they are offline
           }
+          html = parsed.documentElement.innerHTML; // update the html to reflect our changes
           continue;
         }
         
@@ -323,7 +330,7 @@ async function scrapeHtml(url, urlDepth) {
         } catch (error) {
           console.error(error);
         }
-        html = parsed.documentElement.innerHTML;
+        html = parsed.documentElement.innerHTML; // update the html to reflect our changes
 
       }
     }
