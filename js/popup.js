@@ -1,14 +1,3 @@
-const getData = async (url) => {
-  let result = '';
-  try {
-    result = $.get(url);
-    return result;
-  } catch (e) {
-    console.error(e);
-    return 'Failed';
-  }
-};
-
 //This fills the starting url with the current tabs url, and starts the getLinks() method
 chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
   console.log(tabs[0].url);
@@ -17,35 +6,18 @@ chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
   getLinks();
 });
 
-//Given a limit, displays a warning if it is available
-var overLimit = false;
-async function getLinks() {
-  var html = await getData(document.getElementById('urlFormInput').value);
-  var parser = new DOMParser();
-  var parsed = parser.parseFromString(html, 'text/html');
-  var links = parsed.getElementsByTagName('a');
-  var linkLimit = 100; //This link limit IS adjustable, if the number of links on the start page is over this, then a warning will appear
-  overLimit = links.length > linkLimit;
-  if (overLimit) {
-    document.getElementById('link-alert').hidden = false;
-    document.getElementById('link-alert').innerText =
-      'This page links to over ' +
-      linkLimit +
-      ' pages, we recommend setting a small depth (less than 2) for a faster download.';
-  }
-    // Get the input element
-  var myInput = document.getElementById("depth-input");
-
-  // Add event listener for change event
-  myInput.addEventListener("click", function(event) {
-    // Handle the change event
-    const alert = bootstrap.Alert.getOrCreateInstance('#alert-depth')
-    setTimeout(function() {
-      // Use Bootstrap's .close method to close the alert
-      alert.close()
-    }, 5000); 
+// This to alert when user input high depth
+const depthInput = document.getElementById('depth-input');
+depthInput.addEventListener('change', (event) => {
+    const depthValue = event.target.value;
+    const alert = document.getElementById('alert-depth')
+    // Check value of depth is high 
+    if (depthValue >1) {
+      alert.hidden=false;
+    }else {
+      alert.hidden=true;
+    }
   });
-}
 
 // Set the appropriate options values from chrome.storage
 function fillOptions() {
@@ -60,7 +32,7 @@ function fillOptions() {
     }
   );
 }
- 
+// Use a flag to let user know the extension is downloading 
 function setFlagDownload(bool){
   chrome.storage.sync.set({'flagDownload':bool})
 }
