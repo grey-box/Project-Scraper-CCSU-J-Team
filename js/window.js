@@ -16,7 +16,7 @@ bc.addEventListener('message', (event) => {
   startingUrlInput = event.data[0];
   depthInput = event.data[1];
   omitImgs = event.data[2];
-  setFlagDownload("True")
+  setFlagDownload('True');
   saveAs();
 });
 
@@ -60,8 +60,8 @@ async function saveAs() {
       );
 
     document.getElementById('current-progress').innerText =
-      'Successfully Downloaded'; //Informs user of successful download
-    setFlagDownload("False")
+      'Done. Please unzip file before using.'; //Informs user of successful download
+    setFlagDownload('False');
     });
   zip = new JSZip(); //Clears the zip for future use
 }
@@ -190,9 +190,9 @@ async function scrapeHtml(url, urlDepth) {
 
       // update html with proper path, if the depth is 0 we do not want ../
       if (urlDepth >= 1) {
-        elementRef.setAttribute('src', '../js/' + scriptFile +".js" );
+        elementRef.setAttribute('src', '../js/' + scriptFile +'.js' );
       } else {
-        elementRef.setAttribute('src', 'js/' + scriptFile +".js");
+        elementRef.setAttribute('src', 'js/' + scriptFile +'.js');
       }
       html = PARSEDHTML.documentElement.innerHTML; //updates the current html       
 
@@ -201,7 +201,7 @@ async function scrapeHtml(url, urlDepth) {
         urlJS.push({ url: lastPart });
         let scriptText = await getData(elementSrc); // get the js data
         if (scriptText === 'Failed') continue;
-        zip.file('js/' + scriptFile +".js", scriptText); // add to the zip file
+        zip.file('js/' + scriptFile +'.js', scriptText); // add to the zip file
       } catch (err) {
         console.error(err);
       }
@@ -225,7 +225,7 @@ async function scrapeHtml(url, urlDepth) {
           let bgIni = bg.substring(bg.indexOf('url') + 4, bg.indexOf(')')); // take a string from url to )
           // Trim url with some case in each if statement. These if statement need to be in order.
           let path;
-          if(bgIni.search("xmlns")!==-1) break; // handle url contain xmlns, svgs
+          if(bgIni.search('xmlns')!==-1) break; // handle url contain xmlns, svgs
           if (bgIni.search("'") !== -1) {
             bgIni = bgIni.substring(bgIni.indexOf("'")+1, bgIni.lastIndexOf("'"));
           }
@@ -296,7 +296,7 @@ async function scrapeHtml(url, urlDepth) {
         let link = links[j].href; //Given a link
         // if link does not contains any string belongs to "mailto", "tel", and "#", then scrape file. 
         // if the resulting link is not one that is currently in the list
-        if((link.toString().search("mailto")!==-1 || link.toString().search("tel")!==-1 || link.toString().search("#")!==-1)
+        if((link.toString().search('mailto')!==-1 || link.toString().search('tel')!==-1 || link.toString().search('#')!==-1)
           || (checkDuplicate(link,urlList) || link.length === 0))
           continue;
 
@@ -320,12 +320,12 @@ async function scrapeHtml(url, urlDepth) {
         }
         
         try { 
-          pdfName = getTitle(link) + ".pdf";
+          pdfName = getTitle(link) + '.pdf';
           zip.file('pdf/' + pdfName, urlToPromise(link), { binary: true });
           if (urlDepth>=1){ // Set the proper href values if they are pdf file
-            links[j].setAttribute('href',"../pdf/"+ pdfName );
+            links[j].setAttribute('href','../pdf/'+ pdfName );
           }else {
-            links[j].setAttribute('href',"pdf/"+ pdfName );
+            links[j].setAttribute('href','pdf/'+ pdfName );
           }
         } catch (error) {
           console.error(error);
@@ -350,7 +350,7 @@ async function scrapeHtml(url, urlDepth) {
         // let lastPart = srcString.toString().substring(srcString.lastIndexOf('/')+1); //
         // skip a loop in ForEach loop  // return is instead of continue;
         if(src===null) return;
-        if (src.search("base64")!==-1) return;
+        if (src.search('base64')!==-1) return;
 
         // These code is used to check duplicate css file
         let imageName = src.substring(src.lastIndexOf('/') + 1);
@@ -359,7 +359,7 @@ async function scrapeHtml(url, urlDepth) {
           urlImage.push({ url: imageName });          
           if (src.search('//') !== -1) {
             src = src.substring(src.indexOf('//'));
-            src = "https:" + src;
+            src = 'https:' + src;
           } else {
             src = getAbsolutePath(src, url);
           }
@@ -392,7 +392,7 @@ async function scrapeHtml(url, urlDepth) {
           urlVideo.push({url: videoName});
           if (src.search('//') !== -1) {
             src = src.substring(src.indexOf('//'));
-            src = "https:" + src;
+            src = 'https:' + src;
           } else {
             src = getAbsolutePath(src, url);
           }
