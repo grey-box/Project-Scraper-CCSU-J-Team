@@ -518,6 +518,17 @@ async function scrapeHtml(url, urlDepth) {
     return html;
   }
 
+  function urlToPromise(url) {
+    return new Promise(function (resolve, reject) {
+      JSZipUtils.getBinaryContent(url, function (err, data) {
+        if (err) {
+          resolve('Failed To Find Content');
+        } else {
+          resolve(data);
+        }
+      });
+    });
+  }
 
   // Main Asynchronous function that initiates the scraping process
   const scrape = async (url) => {
