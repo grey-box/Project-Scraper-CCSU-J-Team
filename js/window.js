@@ -480,50 +480,44 @@ async function scrapeHtml(url, urlDepth) {
     return html;
   };
 
-  const getVideos = async (html) => {
-    try {
-      let dp = new DOMParser();
-      let parsed = dp.parseFromString(html, 'text/html');
-      let testVideoElements = parsed.getElementsByTagName('iframe');
-      Array.from(testVideoElements).forEach(async (video) => {
-        let src = video.getAttribute('src');
+  const getVideoEmbed = async (html) => {
+    let dp = new DOMParser();
+    let parsed = dp.parseFromString(html, 'text/html');
+    let testVideoEmbed = parsed.getElementsByClassName('video-embed');
+    let i = 0;
+    
+    //creates folder that users need to place their videos in
+    zip.folder('video');
 
-        if (src === null) return;
+    //loops through all divs with the 'video-embed' class name
+    Array.from(testVideoEmbed).forEach(async (embed) => {
+      //Creates new Iframe element, sets source and size.
+      let iframeNew = document.createElement('iframe');
+      iframeNew.src = 'iframe/video_' + i + '.html';
+      iframeNew.height = '100%';
+      iframeNew.width = '100%';
 
-        let videoName = src.substring(src.lastIndexOf('/') + 1);
-        videoName = videoName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
-        if (!checkDuplicate(videoName, urlVideo)) {
-          urlVideo.push({ url: videoName });
-          if (src.search('//') !== -1) {
-            src = src.substring(src.indexOf('//'));
-            src = 'https:' + src;
-          } else {
-            src = getAbsolutePath(src, url);
-          }
-          zip.file('video/' + videoName, urlToPromise(src), { binary: true });
-        }
-        if (urlDepth >= 1) video.setAttribute('src', '../video/' + videoName);
-        else video.setAttribute('src', 'video/' + videoName);
-      });
+      //deletes contents of div with the class name: "video-embed"
+      embed.innerHTML='';
+      //appends new iframe to the div
+      embed.appendChild(iframeNew);
+      //adds back to the html
       html = parsed.documentElement.innerHTML;
-      return html;
-    } catch (err) {
-      console.error(err);
-    }
+
+      //gets template for iframe
+      let iframeFile = await getData('./videos.html'); 
+      //Changes template to include the correct video.
+      parsedIfFile = dp.parseFromString(iframeFile, 'text/html');
+      parsedIfFile.getElementById('video').setAttribute('src', '../video/video_' + i + '.mp4');
+      parsedIfFile.getElementsByClassName('videoText')[0].innerHTML = 'Place video in the "video" folder with the name: "video_' + i + '.mp4"';
+      iframeFile = parsedIfFile.documentElement.innerHTML;
+    
+      zip.file('iframe/video_' + i + '.html', iframeFile, { binary: true });
+      i++;
+    })
     return html;
-  };
-  //Used for getting image data, used in getCSS and getImgs
-  function urlToPromise(url) {
-    return new Promise(function (resolve, reject) {
-      JSZipUtils.getBinaryContent(url, function (err, data) {
-        if (err) {
-          resolve('Failed To Find Content');
-        } else {
-          resolve(data);
-        }
-      });
-    });
   }
+
 
   // Main Asynchronous function that initiates the scraping process
   const scrape = async (url) => {
@@ -537,7 +531,7 @@ async function scrapeHtml(url, urlDepth) {
           html = await getImgs(html); //downloads images
         }
         html = await getCSSImg(html, 'html', url); // gets back-ground:image in the html text
-        html = await getVideos(html);
+        html = await getVideoEmbed(html);
         //html = await getLinks(html);
         html = await getPDF_setHref(html);
       } catch (err) {
