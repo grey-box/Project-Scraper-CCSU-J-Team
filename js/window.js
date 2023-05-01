@@ -18,7 +18,16 @@ bc.addEventListener('message', async (event) => {
   depthInput = event.data[1];
   omitImgs = event.data[2];
   setFlagDownload('True');
-  await saveAs();
+  try {
+    await saveAs();
+  }
+  catch (e) {
+    console.error(e);
+    document.getElementById('current-progress').innerText = 'Sorry, there was an error. Try a smaller depth.';
+    document.getElementById('spinner').hidden = true;
+    setFlagDownload('False');
+    zip = new JSZip();
+  }
 });
 
 let extId = chrome.runtime.id; // Get the extension's ID
@@ -111,9 +120,14 @@ async function zipFile() {
 const get_HTMLlinks = async (startUrlInput, depthInput) => {
   urlList.push({ url: startUrlInput, depth: 0 }); //sets the first url to the depth of 0
   for (const element of urlList) {
-    //console.log('element url : ' + element.url);
-    if (element.depth <= depthInput) {
-      let html = await getData(element.url);
+    if (element.depth < depthInput) {
+      let html;
+      try{
+        html = await getData(element.url);
+      } catch (e) {
+        console.error(e);
+        continue;
+      }
       var parser = new DOMParser();
       var parsed = parser.parseFromString(html, 'text/html');
       var links = parsed.getElementsByTagName('a');
@@ -164,9 +178,9 @@ function setFlagDownload(bool) {
 //given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
 function getTitle(url) {
   url = url.toString();
-  url = url.substring(8);
-  if (url.length >= 70) url = url.substring(url.length - 70);
-  url = url.replace(/[^a-zA-Z0-9 ]/g, '_');
+  url = url.replace(/^\/\/|^.*?:(\/\/)?/, ''); // this removes the url protocol
+  if (url.length >= 70) url = url.substring(url.length - 70); // we dont want our file names to exceed the maximum length
+  url = url.replace(/[^a-zA-Z0-9 ]/g, '_'); // this replaces invalid file characters with '_'
   return url;
 }
 //Method that makes requests to the get html,css,and image blobs
@@ -212,20 +226,9 @@ function checkDuplicate(e, list) {
   }
   return false;
 }
-// //checks the href of the link for a duplicate file
-// function checkDuplicateLink(e, list) {
-//   for (let i = 0; i < list.length; i++) {
-//     if (e.toString() === list[i].url.toString()) {
-//       console.log("dupplicate href "+e.href);
-//       console.log("duplicate "+ e);
-//       return true;
-//     }
-//   }
-//   return false;
-// }
+
 //GIVEN THE URL AND URL_DEPTH, updates the zip files and adds more urls to the list
 async function scrapeHtml(url, urlDepth) {
-  console.log('going to scrape html : ' + url);
   let html = ''; //starts the
   // Asynchronous function to retrieve CSS from links
   async function getCSS(html) {
@@ -458,6 +461,21 @@ async function scrapeHtml(url, urlDepth) {
         // These code is used to check duplicate css file
         let imageName = src.substring(src.lastIndexOf('/') + 1);
         imageName = imageName.replace(/[&\/\\#,+()$~%'":*?<>{}]/g, '');
+        // If the image name is too long, try to shorten it
+        if (imageName.length > 100) {
+          let indexExtension = imageName.lastIndexOf('.');
+          if (indexExtension !== -1) {
+            fileExtension = imageName.substring(indexExtension);
+            if (fileExtension.length > 20) {
+              imageName = imageName.substring(0,99);
+            }
+            else {
+              imageName = imageName.substring(0,99) + fileExtension;
+            }
+          }
+          else
+            imageName = imageName.substring(0,99); 
+        }
         if (!checkDuplicate(imageName, urlImage)) {
           urlImage.push({ url: imageName });
           if (src.search('//') !== -1) {

@@ -1,9 +1,8 @@
-//This fills the starting url with the current tabs url, and starts the getLinks() method
+//This fills the starting url with the current tabs url
 chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
   console.log(tabs[0].url);
   const urlInput = document.getElementById('urlFormInput');
   urlInput.value = tabs[0].url;
-  getLinks();
 });
 
 // This to alert when user input high depth
@@ -12,18 +11,34 @@ depthInput.addEventListener('change', (event) => {
     const depthValue = event.target.value;
     const alert = document.getElementById('alert-depth')
     // Check value of depth is high 
-    if (depthValue >1) {
+    if (depthValue > 1) {
       alert.hidden=false;
     }else {
       alert.hidden=true;
     }
   });
 
+// The following will prevent the user from entering an invalid depth and prevent a depth greater than 2 unless the large depth option is checked
+let enableLargeDepth = document.getElementById('enable-large-depth');
+depthInput.addEventListener('input', (event) => {
+  let depthValue = event.target.value;
+  if (depthValue < 0) {
+    event.preventDefault();
+    event.target.value = '';
+  }
+  if (enableLargeDepth.checked || (depthValue <= 2 && depthValue >= 0)) {}
+  else {
+    event.preventDefault();
+    event.target.value = '';
+  }
+})
+
 // Set the appropriate options values from chrome.storage
 function fillOptions() {
   chrome.storage.sync.get(
     (items) => {
       console.log(items.depth);
+      document.getElementById('enable-large-depth').checked = items.enableLargeDepth;      
       document.getElementById('depth-input').value = items.depth;
       document.getElementById('omit-imgs').checked = items.omitImages;
       // The following is commented out since we do not have these options implemented
@@ -32,6 +47,7 @@ function fillOptions() {
     }
   );
 }
+
 // Use a flag to let user know the extension is downloading 
 function setFlagDownload(bool){
   chrome.storage.sync.set({'flagDownload':bool})

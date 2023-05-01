@@ -17,13 +17,23 @@
     
     <h1>Options</h1> 
 
+    <div class="col-8 justify-content-start input-group-sm">
+      <label class="form-check-label" for="enable-large-depth">
+        <input class="form-check-input" type="checkbox" id="enable-large-depth" name="enable-large-depth">
+        Enable Large Depth
+      </label>
+      <div class="tooltip2">&#x1F6C8;
+        <span class="tooltiptext2">Select this to uncap the depth field (not recommended).</span>
+      </div>
+    </div>
+
     <div>
       <label>
         Depth
         <div class="tooltip2">&#x1F6C8;
           <span class="tooltiptext2">Each time we visit a new link, it is one level deeper than the page we found it on.</span>
         </div>
-        <input class="d-inline-block" type="number" min="0" max="10" class="form-control" id="depth" placeholder="0-10" />
+        <input class="d-inline-block col-3" type="number" class="form-control" id="depth" placeholder="0-2" />
       </label>
     </div>
      
