@@ -10,6 +10,9 @@ let urlVideo = [];
 let urlJS = [];
 let urlPdf = [];
 
+// counter for video file names
+let videoIndex = 1;
+
 const bc = new BroadcastChannel('scraper_data');
 
 // Receive the message from the popup.js which contains the user's scraping settings
@@ -88,6 +91,7 @@ async function downloadHTML() {
   console.log('All downloads completed');
 
   // call zipFile() after all downloads have completed
+  await makeIframes();
   await zipFile();
   showProgressBar(100, true);
 }
@@ -501,37 +505,33 @@ async function scrapeHtml(url, urlDepth) {
   const getVideoEmbed = async (html) => {
     let dp = new DOMParser();
     let parsed = dp.parseFromString(html, 'text/html');
-    let testVideoEmbed = parsed.getElementsByClassName('video-embed');
-    let i = 0;
+    let iframeElements = parsed.getElementsByTagName('iframe');
     
     //creates folder that users need to place their videos in
     zip.folder('video');
 
     //loops through all divs with the 'video-embed' class name
-    Array.from(testVideoEmbed).forEach(async (embed) => {
+    Array.from(iframeElements).forEach(async (embed) => {
       //Creates new Iframe element, sets source and size.
-      let iframeNew = document.createElement('iframe');
-      iframeNew.src = 'iframe/video_' + i + '.html';
-      iframeNew.height = '100%';
-      iframeNew.width = '100%';
+      if (embed.getAttribute('src').search('youtube') !== -1) {
+        let iframeNew = document.createElement('iframe');
+        if (urlDepth >= 1) {
+          iframeNew.src = '../iframe/video_' + videoIndex + '.html';  
+        }
+        else {
+          iframeNew.src = 'iframe/video_' + videoIndex + '.html';
+        }
+        iframeNew.height = '100%';
+        iframeNew.width = '100%';
 
-      //deletes contents of div with the class name: "video-embed"
-      embed.innerHTML='';
-      //appends new iframe to the div
-      embed.appendChild(iframeNew);
-      //adds back to the html
-      html = parsed.documentElement.innerHTML;
+        // add our new iframe and delete the old one
+        embed.parentNode.insertBefore(iframeNew, embed);
+        embed.outerHTML ='';
+        //adds back to the html
+        html = parsed.documentElement.innerHTML;
 
-      //gets template for iframe
-      let iframeFile = await getData('./videos.html'); 
-      //Changes template to include the correct video.
-      parsedIfFile = dp.parseFromString(iframeFile, 'text/html');
-      parsedIfFile.getElementById('video').setAttribute('src', '../video/video_' + i + '.mp4');
-      parsedIfFile.getElementsByClassName('videoText')[0].innerHTML = 'Place video in the "video" folder with the name: "video_' + i + '.mp4"';
-      iframeFile = parsedIfFile.documentElement.innerHTML;
-    
-      zip.file('iframe/video_' + i + '.html', iframeFile, { binary: true });
-      i++;
+        videoIndex++;
+      }
     })
     return html;
   }
@@ -573,4 +573,19 @@ async function scrapeHtml(url, urlDepth) {
   };
 
   return await scrape(url); //returns the result of crawl/scrape
+}
+
+async function makeIframes() {
+  let dp = new DOMParser();
+  for (let i=1; i<videoIndex; i++) {
+    //gets template for iframe
+    let iframeFile = await getData('./videos.html'); 
+    //Changes template to include the correct video.
+    let parsedIfFile = dp.parseFromString(iframeFile, 'text/html');
+    parsedIfFile.getElementById('video').setAttribute('src', '../video/video_' + i + '.mp4');
+    parsedIfFile.getElementsByClassName('videoText')[0].innerHTML = 'Place video in the "video" folder with the name: "video_' + i + '.mp4"';
+    iframeFile = parsedIfFile.documentElement.innerHTML;
+  
+    zip.file('iframe/video_' + i + '.html', iframeFile, { binary: true });
+  }
 }
