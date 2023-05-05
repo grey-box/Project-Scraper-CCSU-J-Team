@@ -1,7 +1,7 @@
 {
   "name": "Project Web Scraper",
   "description": "Make an offline version of a web page in one simple click.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "manifest_version": 3,
 	"icons": {
 		"128": "images/Picture4_128.png",
@@ -22,7 +22,6 @@
   ],
 
   "permissions": [
-    "webRequest", 
     "storage",
     "tabs",
     "downloads"
