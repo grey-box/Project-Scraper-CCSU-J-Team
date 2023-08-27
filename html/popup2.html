@@ -1,101 +1,126 @@
 <!DOCTYPE html>
 <html>
-  <link rel="stylesheet" href="../css/bootstrap.min.css">
-  <script src="../js/bootstrap.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
   <head>
-    <title>Grey-box Web Scraper</title>
-    <!-- Bootstrap CSS -->
+    <title>Grey-Box</title>
     <link rel="stylesheet" href="../css/bootstrap.min.css">
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/styles.css"> 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"> 
   </head>
-  <body class="py-2 px-3 white-background ">
-    <!-- <img src="../images/image.png" class="mx-auto d-block" class="sizing"> -->
-    <h3 class="text-bg-secondary py-2 text-center">WebSaver Grey-Box</h3>
-    <div class="text-center mb-3">
-      <a id="submit-btn">
-        <div class="tooltip2">
-          <img src="../images/grey-image_2.png" alt="Grey-Box" height="100" >
-          <span class="tooltiptext2">Click to download</span>
+  <body class="py-2 px-3">
+
+    <h3 class="text-white bg-secondary text-center rounded py-2 px-1 mb-3">Web Scraper by Grey-Box</h3>
+    <div class="d-flex justify-content-center mb-3">
+      <div id="submit-btn" class="text-center">
+        <div class="sphere3D">         
+          <img src="../images/grey-image_2.png" alt="Clickable Image" />  
         </div>
-      </a>
+        <span  id="output" class="artistic"></span>  
+      </div>
+      
     </div>
-    <!-- Toast message -->
-    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" id="myToast">
+    <div class="toast mb-3" role="alert" aria-live="assertive" aria-atomic="true" id="myToast">
       <div class="toast-header">
-        <i class="bi bi-exclamation-triangle-fill text-warning"></i> 
         <strong class="pl-4 me-auto">Alert</strong>
         <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
       <div class="toast-body">
         The program is in the download process.<br>Please wait until it finishes!
       </div>
+    </div> 
+    <div class="d-flex justify-content-left"> 
+        <button class="d-block text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWidthExample" aria-expanded="false" aria-controls="collapseWidthExample" style="background-color: white; border: none; color: dimgray;">
+           <span class="fs-5 fw-bold me-1">Advanced Options</span><i class="bi bi-caret-down"></i>
+        </button>
     </div>
-
-    <form id="form" class="row row-cols-lg-auto g-3 align-items-center">
-      <div class="col-12 input-group-sm">
-        <input type="url" required name="url" disabled class="form-control" id="urlFormInput" placeholder="">
-      </div>
-    </form>
-      <div class="d-flex justify-content-left">
-        <div>
-          <a class="d-block mb-2 " data-bs-toggle="collapse" href="#options-collapse" role="button" aria-expanded="false" aria-controls="options-collapse" style="background-color: white; border: none; color: dimgray;">
-            Advanced Options <i class="bi bi-caret-down"></i>
-          </a>
-
-        </div>
-      </div>
-    <div class="collapse " id="options-collapse">
-      <div class="container">
-          <div class="row justify-content-start text-left">
-            <!-- Omit -->
-            <div class="col-8 justify-content-start input-group-sm">
+    <div class="collapse" id="collapseWidthExample">
+      <div class="">
+            <div class="input-group-sm p-1">
               <label class="form-check-label" for="omit-images-checkbox">
-                <input class="form-check-input" type="checkbox" id="omit-imgs" name="omit_images">
-                Omit Images
+                <input class="form-check-input" type="checkbox" id="omit-imgs" name="omit_images" >
+                Exclude Images
               </label>
-              <div class="tooltip2">&#x1F6C8;
-                <span class="tooltiptext2">Select this to omit downloading images from the website</span>
-              </div>
+              <i class="bi bi-patch-question text-dark pe-auto" data-bs-placement="top" title="Select this if you don't want to download images from the website."></i>
             </div>
-            <!-- Help icon -->
-            <div class="col-4">
-              <div class="d-flex justify-content-end mb-2 ms-auto">
-                <a class="me-2" href="https://www.notion.so/grey-box/Project-Web-Scrapper-Instruction-for-version-BETA-7ba5a0f1b7dc4406ab812c58c53b3c4d" target="_blank">
-                  <i class="bi bi-patch-question text-dark"></i>
-                  <!-- <img src="https://www.iconsdb.com/icons/preview/gray/gear-xxl.png" width="18" height="18" > -->
-                </a>
-              </div>
+            <div class="input-group-sm p-1">
+              <label class="form-check-label" for="focus-mode-checkbox">
+                <input class="form-check-input" type="checkbox" id="focus-mode" name="focus-mode" >
+                Focus Mode
+              </label>
+              <i class="bi bi-patch-question text-dark pe-auto" data-bs-placement="top" title="Get text-based content."></i>
             </div>
-          </div>
-          <!-- Depth -->
-          <div class="row justify-content-start">
-            <div class="col-12  input-group-sm">
+          <div class="">
+            <div class="input-group-sm p-1">
               <label class="d-inline-block" for="depth-input">Depth</label>
-              <div class="tooltip2">&#x1F6C8;
-                <span class="tooltiptext2">Each time a new page is visited it is one level deeper than the last page</span>
-              </div>
               <input class="d-inline-block" type="number" name="depth" min="0" max="10" class="form-control" id="depth-input" placeholder="0-10" value="1">
+              <i class="bi bi-patch-question text-dark pe-auto" data-bs-placement="top" title="This feature is still being worked on therefore you might encounter minor bugs." ></i>
             </div>
           </div>
           <!-- Alert for depth -->
-          <div class="alert alert-warning mt-1" role="alert" id="alert-depth" hidden="True">
+          <!-- <div class="alert alert-warning mt-1" role="alert" id="alert-depth" hidden="True">
             Increasing the depth will take long time to download.<br> We recommend setting a small depth (less than 2) for a faster download.
+          </div> -->
+          <div class="input-group-sm p-1">
+            <label class="form-check-label" for="omit-images-checkbox">
+              <input class="form-check-input" type="checkbox" id="omit-imgs" name="omit_images" >
+              Restrict Domain
+            </label>
+            <i class="bi bi-patch-question text-dark pe-auto" data-bs-placement="top" title="Select this if you want domain to get restricted."></i>
           </div>
-      </div>
-      <div class="py-1">
-          <!-- Setting -->
-          <button class="btn btn-sm btn-secondary justify-content-start" id="go-to-options">Setting</button>        
-      </div>
-
-    </div>
-  </div>
-  
+          <div class="input-group-sm p-1">
+            <label class="form-check-label" for="omit-images-checkbox">
+              <input class="form-check-input" type="checkbox" id="multiple-urls" name="omit_images" disabled data-bs-toggle="collapse" data-bs-target="#collapseWidthExample1">
+              Download Multiple URLs
+            </label>
+            <i class="bi bi-patch-question text-dark pe-auto" data-bs-placement="top" title="This feature is still in development, feel free to reach out with any suggestions." ></i>
+            <div class="collapse" id="collapseWidthExample1">  
+              <div class="mt-1">
+                <textarea id="story" name="story"
+                placeholder="Enter URLs by putting each URL on a new line...." rows="7" cols="34"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+           <!-- Help icon -->
+            <!-- <div class="col-4">
+              <div class="d-flex justify-content-end mb-2 ms-auto">
+                <a class="me-2" href="https://www.notion.so/grey-box/Project-Web-Scrapper-Instruction-for-version-BETA-7ba5a0f1b7dc4406ab812c58c53b3c4d" target="_blank">
+                  <i class="bi bi-patch-question text-dark"></i>
+        <img src="https://www.iconsdb.com/icons/preview/gray/gear-xxl.png" width="18" height="18" >
+                </a>
+              </div>
+            </div> -->
     
+      <!-- <div class="py-1">
+       
+      </div> -->
+    </div>
+    <div id="feedback-form" class="mt-2 feedback-form-hide">  
+      <center>
+        Your Download Is Complete! 
+        <a
+          class="btn btn-secondary btn-sm mt-1"
+          href="https://forms.gle/p6quKSCDj5PoyVb37"
+          target="_blank"
+          >Please provide feedback</a
+        >
+      </center>
+    </div>
 
+  </div>
+    <script src="../js/bootstrap.min.js"></script>
+    <script>
+      // Initialize tooltip component
+      document.addEventListener("DOMContentLoaded", function(){
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+      });
+    </script>
     <script src="../js/jszip.js"></script>
     <script src="../js/jszip-utils.js"></script>
     <script src="../js/jquery-3.6.0.min.js"></script>
     <script src="../js/popup.js"></script>
+    <!-- <script src="../js/window.js"></script>  -->
   </body>
 </html>

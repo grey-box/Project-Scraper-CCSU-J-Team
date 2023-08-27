@@ -1,39 +1,63 @@
 // These are variables to indicate our user's settings. They are assigned from the BroadcastChannel message.
-let startingUrlInput;
-let depthInput;
-let omitImgs;
+let startingUrlInput = "";
+let depthInputUser = 0;
+let isImageExcluded = false;
+let isMultipleURLs = false;
+let downloadTime = 0;
+
 // initializes empty lists for duplicate checking
 let urlList = [];
 let urlCSS = [];
 let urlImage = [];
 let urlVideo = [];
 let urlJS = [];
-
+let scrapingDone = false;
 const bc = new BroadcastChannel('scraper_data');
 
 // Receive the message from the popup.js which contains the user's scraping settings
 bc.addEventListener('message', (event) => {
   startingUrlInput = event.data[0];
-  depthInput = event.data[1];
-  omitImgs = event.data[2];
+  isImageExcluded = event.data[1];
+  isMultipleURLs = event.data[2];
+  depthInputUser = event.data[3];
+  downloadTime = event.data[4]
   setFlagDownload('True');
   saveAs();
 });
 
+// Set flag download
+function setFlagDownload(bool){
+  chrome.storage.sync.set({'flagDownload':bool})
+}
 
 let extId = chrome.runtime.id; // Get the extension's ID
 
 let depth = 0; //sets the default depth of the crawl
 let zip = new JSZip(); //creates a new file to hold the zipped contents
 
+function doSomethingAsync(delay) {
+  return new Promise((resolve, reject) => {
+      setTimeout(() => {
+          // simulate async work
+          if(document.getElementById('current-progress').innerText === 100 +'%')  {
+          document.getElementById('current-progress').innerText = 0 +'%';
+          document.getElementById('progress-bar').style = 'width:' + 0 +'%';
+          resolve();
+        }
+      }, delay);
+  });
+}
+
 async function saveAs() {
-  urlList[0] = { url: startingUrlInput, depth: 0 }; //sets the first url to the depth of 0
-  depth = depthInput; //gets the max depth input by the user
+ 
+  urlList[0] = { url: startingUrlInput, depth: depthInputUser }; //sets the first url to the depth of 0
+  console.log(urlList);
+  depth = depthInputUser; //gets the max depth input by the user
   for (let i = 0; i < urlList.length; i++) {
     document.getElementById('current-progress').innerText =
-      'Progress: ' + Math.ceil((i / urlList.length) * 100).toString() + '%';
+      Math.ceil((i+1 / urlList.length) * 100).toString() + '%';
     document.getElementById('progress-bar').style =
-      'width:' + Math.ceil((i / urlList.length) * 100).toString() + '%';
+      'width:' + Math.ceil((i+1 / urlList.length) * 100).toString() + '%';
     // }
     let htmlResponse = '<p>Error has occured</p>'; //Default html if something goes wrong with the
     htmlResponse = await scrapeHtml(urlList[i].url, urlList[i].depth); //scrapes the pages and returns html
@@ -42,12 +66,14 @@ async function saveAs() {
     } else
       zip.file('html/' + getTitle(urlList[i].url) + '.html', htmlResponse); //The rest of the links are placed in the html folder
   }
-
+  await doSomethingAsync(3000);
   console.log('loop is finished'); //scraping of all pages is done
+
   let zipName = new URL(startingUrlInput).hostname;
   zip.generateAsync({ type: 'blob' }).then(function (content) {
     //Block of Code Downloads the zip
     let urlBlob = URL.createObjectURL(content); //
+    console.log(content)
     chrome.downloads
       .download({
         url: urlBlob,
@@ -58,16 +84,11 @@ async function saveAs() {
         (err) =>
           (document.getElementById('current-progress').innerText = 'error')
       );
-
-    document.getElementById('current-progress').innerText =
-      'Done. Please unzip file before using.'; //Informs user of successful download
-    setFlagDownload('False');
-    });
+   
+    }) 
+  
+  setFlagDownload('False'); // Reset download process
   zip = new JSZip(); //Clears the zip for future use
-}
-// Set flag download
-function setFlagDownload(bool){
-  chrome.storage.sync.set({'flagDownload':bool})
 }
 
 //given the url, makes url availible for file system naming conventions, used for html files, css files, and image files
@@ -83,6 +104,7 @@ let getData = async (url) => {
   let result = '';
   try {
     result = $.get(url);
+    console.log(result)
   } catch (e) {
     return 'Failed';
   }
@@ -108,10 +130,12 @@ function getAbsolutePath(relPath, baseUrl) {
   // new URL("../mypath","http://www.stackoverflow.com/search").href
   //=> "http://www.stackoverflow.com/mypath"  
   */
-
+console.log(relPath)
+console.log(baseUrl)
   let URLconcat = new URL(relPath, baseUrl);
   return URLconcat;
 }
+
 //checks a url for a duplicate url
 function checkDuplicate(e, list) {
   for (let i = 0; i < list.length; i++) {
@@ -121,7 +145,7 @@ function checkDuplicate(e, list) {
   }
   return false;
 }
-
+           
 //GIVEN THE URL AND URL_DEPTH, updates the zip files and adds more urls to the list
 async function scrapeHtml(url, urlDepth) {
   let html = ''; //starts the
@@ -129,7 +153,9 @@ async function scrapeHtml(url, urlDepth) {
   async function getCSS(html) {
     let dp = new DOMParser();
     let PARSEDHTML = dp.parseFromString(html, 'text/html');
+    // Need to work on this 
     let linkElements = PARSEDHTML.getElementsByTagName('link');
+
     for (const elementRef of linkElements) {
 
       // Create a dummy element to transfer <link> tag href to an <a> tag
@@ -336,6 +362,7 @@ async function scrapeHtml(url, urlDepth) {
     }
     return html;
   }
+
   // Function to download image and replace their links with our own
   const getImgs = async (html) => {
     try {
@@ -408,6 +435,7 @@ async function scrapeHtml(url, urlDepth) {
     }
     return html;
   };
+
   //Used for getting image data, used in getCSS and getImgs
   function urlToPromise(url) {
     return new Promise(function (resolve, reject) {
@@ -424,14 +452,17 @@ async function scrapeHtml(url, urlDepth) {
   // Main Asynchronous function that initiates the scraping process
   const scrape = async (url) => {
     try {
+      console.log(url)
       html = await getData(url); //gets html of the url
+      console.log(html)
       try {
         html = await getJavascript(html); // download external Javascript files
         html = await getCSS(html); //downloads css
-        if (!omitImgs) {
+        let isImageExcluded;
+       if (!isImageExcluded) {
           // checks if the user wants to omit images or not
           html = await getImgs(html); //downloads images
-        }
+       }
         html = await getCSSImg(html, 'html', url); // gets back-ground:image in the html text
         html = await getVideos(html);
         html = await getLinks(html); 
