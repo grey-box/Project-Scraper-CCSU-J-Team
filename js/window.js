@@ -51,7 +51,7 @@ function doSomethingAsync(delay) {
 async function saveAs() {
  
   urlList[0] = { url: startingUrlInput, depth: depthInputUser }; //sets the first url to the depth of 0
-  console.log(urlList);
+
   depth = depthInputUser; //gets the max depth input by the user
   for (let i = 0; i < urlList.length; i++) {
     document.getElementById('current-progress').innerText =
