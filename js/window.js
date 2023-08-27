@@ -66,6 +66,7 @@ async function saveAs() {
     } else
       zip.file('html/' + getTitle(urlList[i].url) + '.html', htmlResponse); //The rest of the links are placed in the html folder
   }
+
   await doSomethingAsync(3000);
   console.log('loop is finished'); //scraping of all pages is done
 
@@ -82,11 +83,18 @@ async function saveAs() {
       })
       .catch(
         (err) =>
-          (document.getElementById('current-progress').innerText = 'error')
+          (document.getElementById('notification').innerText = 'error')
       );
    
     }) 
-  
+    chrome.downloads.onChanged.addListener(function(downloadDelta) {
+      if (downloadDelta.state && downloadDelta.state.current === "complete") {
+          console.log("Download complete:", downloadDelta.id);
+          // Do something when a download completes...
+          document.getElementById('notification').innerText = 'Use Chrome browser to open downloaded pages.';
+      }
+  });
+
   setFlagDownload('False'); // Reset download process
   zip = new JSZip(); //Clears the zip for future use
 }

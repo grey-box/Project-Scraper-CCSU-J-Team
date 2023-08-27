@@ -137,8 +137,8 @@ function fillOptions() {
    
 function openWindow() {
   // parameters for the window we will open
-  let params = `scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,
-  width=400,height=300,left=0,top=0,dependent=yes`;
+let params = `scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,
+width=375,height=275,left=100,top=100,dependent=yes`;
 
   // Opens a new window which executes the scraping code from window.js
   let popupWindow;
