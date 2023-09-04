@@ -26,41 +26,10 @@ body {
   overflow: hidden;
 }
 span.artistic {
-  color: grey;              /* A bold, warm color */
-  /*background-color: grey;    Soft yellow background */      /* Padding around the text */
-  border-radius: 8px;          /* Rounded corners */
-  /* border: 2px dashed white;   Dashed border */
-
-  font-style: italic;          /*  Italic font style */
-  font-weight: bold;           /* Bold font weight */
-   /* Slight spacing between letters */
-  display: inline-block;       /* Allows padding and width/height properties */
- /* Smooth transition for hover effect */
+  color: grey;            
+  font-weight: bold;    
+  display: inline-block;     
 }
-
-
-/* .progress{
-  position: relative;
-  width: 120px;
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: #000;
-}
-
-.progress-ring__circle {
-  transition: stroke-dashoffset 0.35s;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-  stroke-dasharray: 365;
-  stroke-dashoffset: 91.25;
-}
-
-.progress-ring__text {
-  position: absolute;
-} */
 
 .sphere3D img {
   width: 100%;

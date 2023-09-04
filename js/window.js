@@ -67,7 +67,7 @@ async function saveAs() {
       zip.file('html/' + getTitle(urlList[i].url) + '.html', htmlResponse); //The rest of the links are placed in the html folder
   }
 
-  await doSomethingAsync(3000);
+  await doSomethingAsync(3000); 
   console.log('loop is finished'); //scraping of all pages is done
 
   let zipName = new URL(startingUrlInput).hostname;
