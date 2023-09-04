@@ -5,6 +5,71 @@ body {
   font-family: 'Roboto', sans-serif;
 }
 
+/* Custom CSS Styles */
+
+/* General Styles */
+body {
+  background-color: #f0f0f0; /* Assuming a light gray background for the body */
+}
+
+/* Header Styles */
+.header {
+  background-color: #343a40; /* Assuming a dark background color for the header */
+  color: #fff; /* White color text for the header */
+  padding: 1rem; /* Padding for the header */
+  border-radius: 0.5rem; /* Rounded corners for the header */
+  margin-bottom: 1.5rem; /* Margin bottom to separate it from the following content */
+}
+
+/* Main Content Styles */
+.main-content {
+  padding: 2rem; /* Padding for the main content */
+}
+
+/* Submit Button Section Styles */
+.submit-button-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+#submitButton {
+  text-align: center;
+}
+
+.sphere3D {
+  /* Existing styles for sphere3D class (if any) */
+}
+
+.artistic {
+  /* Existing styles for artistic class (if any) */
+}
+
+/* Toast Notification Section Styles */
+.toast-notification-section {
+  margin-bottom: 1.5rem;
+}
+
+/* Advanced Options Section Styles */
+.advanced-options-section {
+  /* You can add styles for the advanced options section here */
+}
+
+.btn-toggle-advanced-options {
+  background-color: white;
+  border: none;
+  color: dimgray;
+}
+
+.advanced-options-controls {
+  /* Styles for the controls within the advanced options section */
+}
+
+/* Additional helper classes (if needed) */
+
+/* ... */
+
+
 #depth-input {
   width : 55px;
 }
